@@ -5,10 +5,10 @@ export default function WelcomeScreen({ onNavigate }) {
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setStage(1), 500);    // Envelope zooms in
-    const t2 = setTimeout(() => setStage(2), 1800);   // Flap opens
-    const t3 = setTimeout(() => setStage(3), 3000);   // Flyer rises out
-    const t4 = setTimeout(() => setStage(4), 4500);   // Button appears
+    const t1 = setTimeout(() => setStage(1), 200);    // Envelope zooms in
+    const t2 = setTimeout(() => setStage(2), 900);    // Flap opens
+    const t3 = setTimeout(() => setStage(3), 1600);   // Flyer rises out
+    const t4 = setTimeout(() => setStage(4), 2400);   // Button appears
 
     return () => {
       clearTimeout(t1);
@@ -30,7 +30,7 @@ export default function WelcomeScreen({ onNavigate }) {
         style={{ zIndex: 1 }}
         initial={{ opacity: 0 }}
         animate={{ opacity: stage >= 3 ? 1 : 0 }}
-        transition={{ duration: 2, ease: 'easeOut' }}
+        transition={{ duration: 1, ease: 'easeOut' }}
       >
         <div className="w-full h-full" style={{
           background: `
@@ -51,9 +51,9 @@ export default function WelcomeScreen({ onNavigate }) {
           opacity: stage >= 1 ? 1 : 0,
         }}
         transition={{ 
-          duration: 1.6, 
+          duration: 0.8, 
           ease: [0.16, 1, 0.3, 1],
-          opacity: { duration: 0.8, ease: 'easeOut' },
+          opacity: { duration: 0.4, ease: 'easeOut' },
         }}
       >
         
@@ -94,7 +94,7 @@ export default function WelcomeScreen({ onNavigate }) {
               y: stage >= 3 ? -90 : 200,
               scale: stage >= 3 ? 1.03 : 0.97,
             }}
-            transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
           >
             <img 
               src="/Official%20CTF%20Entebbe.jpeg" 
@@ -159,7 +159,7 @@ export default function WelcomeScreen({ onNavigate }) {
           }}
           initial={{ rotateX: 0 }}
           animate={{ rotateX: stage >= 2 ? -180 : 0 }}
-          transition={{ duration: 1.4, ease: [0.33, 1, 0.68, 1] }}
+          transition={{ duration: 0.8, ease: [0.33, 1, 0.68, 1] }}
         >
           {/* Front of the flap (Closed state) */}
           <div 
@@ -192,7 +192,7 @@ export default function WelcomeScreen({ onNavigate }) {
         style={{ zIndex: 30 }}
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: stage >= 4 ? 1 : 0, y: stage >= 4 ? 0 : 25 }}
-        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       >
         <button
           onClick={() => onNavigate('entebbe')}
