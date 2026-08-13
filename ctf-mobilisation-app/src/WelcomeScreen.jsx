@@ -5,13 +5,12 @@ export default function WelcomeScreen({ onNavigate }) {
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setStage(1), 200);    // Envelope zooms in
-    const t2 = setTimeout(() => setStage(2), 900);    // Flap opens
-    const t3 = setTimeout(() => setStage(3), 1600);   // Flyer rises out
-    const t4 = setTimeout(() => setStage(4), 2400);   // Button appears
+    // Stage 1 & 2 happen simultaneously: Envelope zooms in AND flap opens
+    const t2 = setTimeout(() => setStage(2), 200);
+    const t3 = setTimeout(() => setStage(3), 1000);   // Flyer rises out
+    const t4 = setTimeout(() => setStage(4), 1800);   // Button appears
 
     return () => {
-      clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
       clearTimeout(t4);
