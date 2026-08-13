@@ -19,7 +19,19 @@ export default function RegistrationForm({ onBack }) {
   const [validationErrors, setValidationErrors] = useState([]); // array of objects matching people array
   const [loadingStage, setLoadingStage] = useState(0); // 0: compiling, 1: registering, 2: submitting
 
+  const [existingCampuses, setExistingCampuses] = useState([]);
+
   const fileInputRef = useRef(null);
+
+  React.useEffect(() => {
+    // Silently fetch existing campuses in the background
+    fetch(SCRIPT_URL)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setExistingCampuses(data);
+      })
+      .catch(err => console.error("Failed to fetch campuses", err));
+  }, []);
 
   // ---------------------------------------------------------
   // Handlers
@@ -331,12 +343,18 @@ export default function RegistrationForm({ onBack }) {
           <div className="relative pt-2">
             <input
               type="text"
+              list="campuses-list"
               value={subOption}
               onChange={(e) => setSubOption(e.target.value)}
               placeholder=" "
               className="floating-input w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all peer"
               required
             />
+            <datalist id="campuses-list">
+              {existingCampuses.map((campus, idx) => (
+                <option key={idx} value={campus} />
+              ))}
+            </datalist>
             <label className="floating-label absolute text-gray-400 left-4 top-5.5 origin-left transition-all duration-200 pointer-events-none peer-focus:text-orange-500">
               {placeholder}
             </label>

@@ -114,3 +114,39 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    // We can fetch from all typical sheets where they might add dynamic locations
+    var sheetsToScan = ["CAMPUSES OUT OF ENTEBBE", "CENTRAL REGION", "EASTERN REGION", "WESTERN REGION", "NORTHERN REGION", "WEST NILE REGION", "ENTEBBE CAMPUSES", "RESIDENTIALS"];
+    var allLocations = [];
+    
+    for (var i = 0; i < sheetsToScan.length; i++) {
+      var sheet = ss.getSheetByName(sheetsToScan[i]);
+      if (sheet) {
+        var lastCol = Math.max(sheet.getLastColumn(), 50);
+        var row1 = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+        
+        for (var c = 0; c < row1.length; c++) {
+          var val = row1[c] ? row1[c].toString().trim() : "";
+          // Ignore empty strings and summary table headers
+          if (val !== "" && val !== "NO." && val !== "MOBILIZED / NAME" && val !== "PHONE NUMBER" && val !== "RESIDENTIAL / CAMPUS / CHURCH") {
+            // Found a location block!
+            if (!allLocations.includes(val)) {
+              allLocations.push(val);
+            }
+          }
+        }
+      }
+    }
+    
+    // Return standard JSON but ensure CORS by relying on Google's default execution redirect
+    return ContentService.createTextOutput(JSON.stringify(allLocations))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
