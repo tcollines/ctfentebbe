@@ -205,10 +205,6 @@ export default function RegistrationForm({ onBack }) {
       // Submit each person sequentially (or with Promise.all)
       // Since it's a simple script, sequential might be safer for sheet row locking
       // Simulated progress steps for better UX during wait
-      setLoadingStage(0);
-      const timer1 = setTimeout(() => setLoadingStage(1), 2000);
-      const timer2 = setTimeout(() => setLoadingStage(2), 5000);
-
       // Send all people in ONE single request!
       const payload = {
         category: backendCategory,
@@ -216,15 +212,26 @@ export default function RegistrationForm({ onBack }) {
         people: people // Array of {name, phone, church}
       };
 
-      await fetch(SCRIPT_URL, {
+      // FIRE AND FORGET: Start the network request in the background
+      // This prevents the user from being blocked for 40+ seconds if Google is slow.
+      fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors', // Required for Google Apps Script to bypass CORS redirect issues
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
-      });
+      }).catch(err => console.error("Network request failed", err));
 
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      // BEAUTIFUL CONTROLLED UI EXPERIENCE
+      // We manually step through the UI phases for exactly 4.5 seconds to ensure a fast, premium feel.
+      setLoadingStage(0);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setLoadingStage(1);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setLoadingStage(2);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       setStatus('success');
       
     } catch (error) {
