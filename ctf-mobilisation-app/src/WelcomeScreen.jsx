@@ -1,0 +1,183 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+
+export default function WelcomeScreen({ onNavigate }) {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setStage(1), 500);    // Envelope zooms in
+    const t2 = setTimeout(() => setStage(2), 1800);   // Flap opens
+    const t3 = setTimeout(() => setStage(3), 3000);   // Flyer rises out
+    const t4 = setTimeout(() => setStage(4), 4500);   // Button appears
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative z-10">
+      
+
+
+
+      {/* Background ambient glow */}
+      <motion.div 
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 1 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: stage >= 3 ? 1 : 0 }}
+        transition={{ duration: 2, ease: 'easeOut' }}
+      >
+        <div className="w-full h-full" style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 50% 35%, rgba(253, 106, 59, 0.5) 0%, rgba(253, 106, 59, 0.2) 35%, transparent 70%),
+            radial-gradient(ellipse 60% 50% at 50% 35%, rgba(255, 140, 50, 0.3) 0%, transparent 50%)
+          `
+        }} />
+      </motion.div>
+
+      {/* Envelope Wrapper */}
+      <motion.div 
+        className="relative w-80 h-56 mt-44"
+        style={{ perspective: '1200px', zIndex: 10, willChange: 'transform, opacity' }}
+        initial={{ y: 30, scale: 0.2, opacity: 0 }}
+        animate={{ 
+          y: stage >= 3 ? 50 : 0, 
+          scale: stage >= 1 ? 1 : 0.2,
+          opacity: stage >= 1 ? 1 : 0,
+        }}
+        transition={{ 
+          duration: 1.6, 
+          ease: [0.16, 1, 0.3, 1],
+          opacity: { duration: 0.8, ease: 'easeOut' },
+        }}
+      >
+        
+        {/* Envelope Back Panel */}
+        <div 
+          className="absolute inset-0 rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.9)]"
+          style={{ 
+            zIndex: 0, 
+            background: 'linear-gradient(180deg, #1e1e1e, #161616)',
+            border: '1px solid #2a2a2a',
+          }}
+        />
+
+        {/* Flyer — clipped so it can only emerge from the top, not poke out the bottom */}
+        <div 
+          className="absolute inset-0"
+          style={{ 
+            clipPath: 'inset(-600px -200px 0px -200px)',
+            zIndex: 1,
+          }}
+        >
+          {/* The Flyer */}
+          <motion.div
+            className="absolute left-3 right-3 bg-black rounded-lg overflow-hidden"
+            style={{ 
+              height: '400px',
+              bottom: '6px',
+              border: '1px solid #333',
+              transformOrigin: 'bottom center',
+              willChange: 'transform',
+            }}
+            initial={{ y: 200, scale: 0.97 }}
+            animate={{ 
+              y: stage >= 3 ? -90 : 200,
+              scale: stage >= 3 ? 1.03 : 0.97,
+            }}
+            transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <img 
+              src="/Official%20CTF%20Entebbe.jpeg" 
+              alt="CTF Entebbe Flyer" 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = '<div class="text-center p-4"><h3 class="text-orange-500 font-bold text-xl">CTF Entebbe</h3><p class="text-xs text-gray-400 mt-2">Official Invitation</p></div>';
+              }}
+            />
+          </motion.div>
+        </div>
+
+        {/* Envelope Left Flap */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{ 
+            clipPath: 'polygon(0 0, 50% 50%, 0 100%)', 
+            background: 'linear-gradient(135deg, #242424, #1a1a1a)',
+            zIndex: 2,
+          }}
+        />
+        
+        {/* Envelope Right Flap */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{ 
+            clipPath: 'polygon(100% 0, 50% 50%, 100% 100%)', 
+            background: 'linear-gradient(225deg, #242424, #1a1a1a)',
+            zIndex: 2,
+          }}
+        />
+
+        {/* Envelope Bottom Flap */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{ 
+            clipPath: 'polygon(0 100%, 50% 50%, 100% 100%)', 
+            background: 'linear-gradient(0deg, #2a2a2a, #222)',
+            zIndex: 3,
+          }}
+        />
+
+        {/* Subtle fold lines for realism */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 4,
+            background: `
+              linear-gradient(to bottom right, transparent 49.5%, rgba(255,255,255,0.03) 49.5%, rgba(255,255,255,0.03) 50.5%, transparent 50.5%),
+              linear-gradient(to bottom left, transparent 49.5%, rgba(255,255,255,0.03) 49.5%, rgba(255,255,255,0.03) 50.5%, transparent 50.5%)
+            `,
+          }}
+        />
+
+        {/* Envelope Top Flap — folds open with 3D rotation */}
+        <motion.div
+          className="absolute inset-0 origin-top"
+          style={{ 
+            clipPath: 'polygon(0 0, 100% 0, 50% 50%)', 
+            background: 'linear-gradient(180deg, #2c2c2c, #252525)',
+            zIndex: 5,
+            backfaceVisibility: 'hidden',
+          }}
+          initial={{ rotateX: 0 }}
+          animate={{ rotateX: stage >= 2 ? 180 : 0 }}
+          transition={{ duration: 1.4, ease: [0.33, 1, 0.68, 1] }}
+        />
+
+      </motion.div>
+
+      {/* Action Buttons */}
+      <motion.div
+        className="flex flex-col sm:flex-row gap-4 mt-16"
+        style={{ zIndex: 30 }}
+        initial={{ opacity: 0, y: 25 }}
+        animate={{ opacity: stage >= 4 ? 1 : 0, y: stage >= 4 ? 0 : 25 }}
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <button
+          onClick={() => onNavigate('entebbe')}
+          className="px-10 py-4 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold tracking-wide text-lg shadow-[0_0_20px_rgba(253,106,59,0.4)] transition-all hover:scale-105 active:scale-95 border border-orange-400/30"
+        >
+          Add Invited Member
+        </button>
+      </motion.div>
+
+    </div>
+  );
+}

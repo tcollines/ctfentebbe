@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-orange-500: #fd6a3b;
+  --color-green-500: #018717;
+  --color-green-600: #016a12;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #050505; /* slightly off-black for depth */
+  color: #ffffff;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Floating label utility classes */
+.floating-input:focus ~ .floating-label,
+.floating-input:not(:placeholder-shown) ~ .floating-label {
+  transform: translateY(-1.5rem) scale(0.85);
+  color: #fd6a3b;
+}
