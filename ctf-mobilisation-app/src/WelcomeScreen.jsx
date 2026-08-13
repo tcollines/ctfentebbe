@@ -158,7 +158,7 @@ export default function WelcomeScreen({ onNavigate }) {
             zIndex: stage >= 2 ? 1 : 7, // Drops behind flyer when opening
           }}
           initial={{ rotateX: 0 }}
-          animate={{ rotateX: stage >= 2 ? 180 : 0 }}
+          animate={{ rotateX: stage >= 2 ? -180 : 0 }}
           transition={{ duration: 1.4, ease: [0.33, 1, 0.68, 1] }}
         >
           {/* Front of the flap (Closed state) */}
@@ -177,7 +177,7 @@ export default function WelcomeScreen({ onNavigate }) {
             style={{
               clipPath: 'polygon(0 0, 100% 0, 50% 50%)', 
               background: 'linear-gradient(180deg, #222, #1a1a1a)',
-              transform: 'rotateX(180deg)',
+              transform: 'rotateY(180deg)',
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
             }}
