@@ -67,17 +67,21 @@ export default function WelcomeScreen({ onNavigate }) {
           }}
         />
 
-        {/* Flyer — clipped so it can only emerge from the top, not poke out the bottom */}
+        {/* Flyer Wrapper — extends far up, but strictly clips at the envelope bottom to prevent bleed */}
         <div 
-          className="absolute inset-0"
+          className="absolute"
           style={{ 
-            clipPath: 'inset(-600px -200px 0px -200px)',
-            zIndex: 1,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            top: '-500px', // Extend way up to allow rising
+            overflow: 'hidden',
+            zIndex: 2,
           }}
         >
           {/* The Flyer */}
           <motion.div
-            className="absolute left-3 right-3 bg-black rounded-lg overflow-hidden"
+            className="absolute left-3 right-3 bg-black rounded-lg overflow-hidden shadow-2xl"
             style={{ 
               height: '400px',
               bottom: '6px',
@@ -108,9 +112,9 @@ export default function WelcomeScreen({ onNavigate }) {
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{ 
-            clipPath: 'polygon(0 0, 50% 50%, 0 100%)', 
+            clipPath: 'polygon(0 0, 51% 51%, 0 100%)', // slightly overlapped to prevent 1px gap
             background: 'linear-gradient(135deg, #242424, #1a1a1a)',
-            zIndex: 2,
+            zIndex: 3,
           }}
         />
         
@@ -118,9 +122,9 @@ export default function WelcomeScreen({ onNavigate }) {
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{ 
-            clipPath: 'polygon(100% 0, 50% 50%, 100% 100%)', 
+            clipPath: 'polygon(100% 0, 49% 51%, 100% 100%)', 
             background: 'linear-gradient(225deg, #242424, #1a1a1a)',
-            zIndex: 2,
+            zIndex: 4,
           }}
         />
 
@@ -128,9 +132,9 @@ export default function WelcomeScreen({ onNavigate }) {
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{ 
-            clipPath: 'polygon(0 100%, 50% 50%, 100% 100%)', 
+            clipPath: 'polygon(0 100%, 50% 49%, 100% 100%)', 
             background: 'linear-gradient(0deg, #2a2a2a, #222)',
-            zIndex: 3,
+            zIndex: 5,
           }}
         />
 
@@ -138,7 +142,7 @@ export default function WelcomeScreen({ onNavigate }) {
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
-            zIndex: 4,
+            zIndex: 6,
             background: `
               linear-gradient(to bottom right, transparent 49.5%, rgba(255,255,255,0.03) 49.5%, rgba(255,255,255,0.03) 50.5%, transparent 50.5%),
               linear-gradient(to bottom left, transparent 49.5%, rgba(255,255,255,0.03) 49.5%, rgba(255,255,255,0.03) 50.5%, transparent 50.5%)
@@ -150,15 +154,35 @@ export default function WelcomeScreen({ onNavigate }) {
         <motion.div
           className="absolute inset-0 origin-top"
           style={{ 
-            clipPath: 'polygon(0 0, 100% 0, 50% 50%)', 
-            background: 'linear-gradient(180deg, #2c2c2c, #252525)',
-            zIndex: 5,
-            backfaceVisibility: 'hidden',
+            transformStyle: 'preserve-3d',
+            zIndex: stage >= 2 ? 1 : 7, // Drops behind flyer when opening
           }}
           initial={{ rotateX: 0 }}
           animate={{ rotateX: stage >= 2 ? 180 : 0 }}
           transition={{ duration: 1.4, ease: [0.33, 1, 0.68, 1] }}
-        />
+        >
+          {/* Front of the flap (Closed state) */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              clipPath: 'polygon(0 0, 100% 0, 50% 50%)', 
+              background: 'linear-gradient(180deg, #2c2c2c, #252525)',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+            }}
+          />
+          {/* Back of the flap (Open state, inside) */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              clipPath: 'polygon(0 0, 100% 0, 50% 50%)', 
+              background: 'linear-gradient(180deg, #222, #1a1a1a)',
+              transform: 'rotateX(180deg)',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+            }}
+          />
+        </motion.div>
 
       </motion.div>
 
