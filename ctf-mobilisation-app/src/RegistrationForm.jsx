@@ -145,6 +145,18 @@ export default function RegistrationForm({ onBack }) {
     }
   };
 
+  const getPhoneError = (phone) => {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, '');
+    if (phone.startsWith('256') || phone.startsWith('+256')) {
+      return digits.length === 12 ? null : 'Must be exactly 12 digits';
+    } else if (phone.startsWith('07') || phone.startsWith('0')) {
+      return digits.length === 10 ? null : 'Must be exactly 10 digits';
+    } else {
+      return 'Must start with 07 or 256';
+    }
+  };
+
   const handleGoBack = () => {
     if (status === 'success') {
       setStatus('idle');
@@ -171,16 +183,15 @@ export default function RegistrationForm({ onBack }) {
     e.preventDefault();
 
     // Validation
-    const phoneRegex = /^[0-9]{10,12}$/;
     const newErrors = people.map(p => ({
       name: !p.name.trim(),
-      phone: !p.phone.trim() || !phoneRegex.test(p.phone.replace(/\s/g, '')),
+      phone: !p.phone.trim() || !!getPhoneError(p.phone),
       church: manifest === 'ENTEBBE' && category === 'Churches' && !p.church.trim()
     }));
 
     if (newErrors.some(e => e.name || e.phone || e.church)) {
       setValidationErrors(newErrors);
-      setErrorMessage("Please ensure all phone numbers are valid (10-12 digits) and all required fields are filled.");
+      setErrorMessage("Please fix the phone numbers and ensure all required fields are filled.");
       setStatus('error');
       return;
     }
@@ -429,13 +440,25 @@ export default function RegistrationForm({ onBack }) {
                   placeholder=" "
                   disabled={status === 'loading'}
                   className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
-                    ${validationErrors[index]?.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+                    ${(validationErrors[index]?.phone || (p.phone && getPhoneError(p.phone))) ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
                   required
                 />
                 <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
-                    ${validationErrors[index]?.phone ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+                    ${(validationErrors[index]?.phone || (p.phone && getPhoneError(p.phone))) ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
                   Phone Number
                 </label>
+                <AnimatePresence>
+                  {p.phone && getPhoneError(p.phone) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-xs text-red-400 mt-1.5 ml-2 font-medium"
+                    >
+                      {getPhoneError(p.phone)}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {manifest === 'ENTEBBE' && category === 'Churches' && (
