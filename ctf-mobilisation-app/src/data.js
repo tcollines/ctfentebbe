@@ -23,7 +23,8 @@ export const DATA = {
   ENTEBBE_CATEGORIES: [
     "Residentials",
     "Campuses",
-    "Churches"
+    "Churches",
+    "Schools"
   ],
   OTHER_CATEGORIES: [
     "Residential",

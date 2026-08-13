@@ -4,7 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRig
 import * as XLSX from 'xlsx';
 import { DATA } from './data';
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwXfcGYBk1jOw1-SJQnES40Y4xJepadZlu6eXLW4Vhinp2ybK-jWtvq-OZ5t23M9Haxxw/exec"; // Wait for user to provide, or they will edit it.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysRn-mDKfyMOCbyWFltvzGeXf60VDXGe1RuaXoen5ng79OSXK74PsW66JK4Ox27vWL1Q/exec"; // Wait for user to provide, or they will edit it.
 
 export default function RegistrationForm({ onBack }) {
   const [step, setStep] = useState(1);
@@ -12,7 +12,7 @@ export default function RegistrationForm({ onBack }) {
   const [category, setCategory] = useState('');
   const [subOption, setSubOption] = useState(''); // Location/Campus/Role
 
-  const [people, setPeople] = useState([{ name: '', phone: '', church: '' }]);
+  const [people, setPeople] = useState([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '' }]);
 
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [errorMessage, setErrorMessage] = useState('');
@@ -52,6 +52,10 @@ export default function RegistrationForm({ onBack }) {
       // For Central Region Residential, location is the manifest itself. Skip step 3.
       setSubOption(manifest);
       setStep(4);
+    } else if (manifest === 'ENTEBBE' && c === 'Schools') {
+      // Schools don't have a sub-option, we collect school name per person
+      setSubOption('Schools');
+      setStep(4);
     } else {
       setStep(3);
     }
@@ -65,7 +69,7 @@ export default function RegistrationForm({ onBack }) {
   };
 
   const handleAddPerson = () => {
-    setPeople([...people, { name: '', phone: '', church: '' }]);
+    setPeople([...people, { name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '' }]);
     setValidationErrors([...validationErrors, {}]);
   };
 
@@ -81,11 +85,11 @@ export default function RegistrationForm({ onBack }) {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        
+
         if (data.length < 2) return; // Need at least headers and one row
 
         const headers = data[0].map(h => String(h).toLowerCase().trim());
-        
+
         // Try to guess the columns
         let nameIdx = headers.findIndex(h => h.includes('name'));
         let phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('contact') || h.includes('number') || h.includes('tel'));
@@ -100,7 +104,7 @@ export default function RegistrationForm({ onBack }) {
           const row = data[i];
           // Skip completely empty rows
           if (!row || row.length === 0 || (!row[nameIdx] && !row[phoneIdx])) continue;
-          
+
           newPeople.push({
             name: row[nameIdx] ? String(row[nameIdx]).trim() : '',
             phone: row[phoneIdx] ? String(row[phoneIdx]).replace(/[^0-9+]/g, '').trim() : '',
@@ -125,7 +129,7 @@ export default function RegistrationForm({ onBack }) {
         setErrorMessage("Failed to read Excel file. Please ensure it's a valid format.");
         setStatus('error');
       }
-      
+
       // Reset input so they can upload the same file again if they want
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -148,9 +152,9 @@ export default function RegistrationForm({ onBack }) {
       const newErrors = [...validationErrors];
       newErrors[index] = { ...newErrors[index], [field]: false };
       setValidationErrors(newErrors);
-      
+
       // If there are no errors remaining across all fields for all people, clear the global error status
-      if (!newErrors.some(e => e.name || e.phone || e.church)) {
+      if (!newErrors.some(e => Object.values(e).some(Boolean))) {
         setStatus('idle');
         setErrorMessage('');
       }
@@ -176,12 +180,14 @@ export default function RegistrationForm({ onBack }) {
       setManifest('');
       setCategory('');
       setSubOption('');
-      setPeople([{ name: '', phone: '', church: '' }]);
+      setPeople([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '' }]);
       return;
     }
 
     if (step > 1 && status !== 'loading') {
       if (step === 4 && manifest !== 'ENTEBBE' && category === 'Residential') {
+        setStep(2); // Skipped step 3
+      } else if (step === 4 && manifest === 'ENTEBBE' && category === 'Schools') {
         setStep(2); // Skipped step 3
       } else {
         setStep(step - 1);
@@ -195,15 +201,25 @@ export default function RegistrationForm({ onBack }) {
     e.preventDefault();
 
     // Validation
-    const newErrors = people.map(p => ({
-      name: !p.name.trim(),
-      phone: !p.phone.trim() || !!getPhoneError(p.phone),
-      church: manifest === 'ENTEBBE' && category === 'Churches' && !p.church.trim()
-    }));
+    const newErrors = people.map(p => {
+      if (category === 'Schools') {
+        return {
+          schoolName: !p.schoolName.trim(),
+          noOfStudents: !p.noOfStudents.trim(),
+          personResponsible: !p.personResponsible.trim(),
+          phone: !p.phone.trim() || !!getPhoneError(p.phone)
+        };
+      }
+      return {
+        name: !p.name.trim(),
+        phone: !p.phone.trim() || !!getPhoneError(p.phone),
+        church: manifest === 'ENTEBBE' && category === 'Churches' && !p.church.trim()
+      };
+    });
 
-    if (newErrors.some(e => e.name || e.phone || e.church)) {
+    if (newErrors.some(e => Object.values(e).some(Boolean))) {
       setValidationErrors(newErrors);
-      setErrorMessage("Please fix the phone numbers and ensure all required fields are filled.");
+      setErrorMessage("Please fix any errors and ensure all required fields are filled.");
       setStatus('error');
       return;
     }
@@ -220,6 +236,7 @@ export default function RegistrationForm({ onBack }) {
         if (category === 'Residentials') backendCategory = 'RESIDENTIALS';
         if (category === 'Campuses') backendCategory = 'ENTEBBE CAMPUSES';
         if (category === 'Churches') backendCategory = 'CHURCHES';
+        if (category === 'Schools') backendCategory = 'SCHOOLS';
       } else {
         if (category === 'Residential') backendCategory = 'CENTRAL REGION';
         if (category === 'Campuses') backendCategory = 'CAMPUSES OUT OF ENTEBBE';
@@ -248,15 +265,15 @@ export default function RegistrationForm({ onBack }) {
       // We manually step through the UI phases for exactly 4.5 seconds to ensure a fast, premium feel.
       setLoadingStage(0);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       setLoadingStage(1);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       setLoadingStage(2);
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       setStatus('success');
-      
+
     } catch (error) {
       console.error(error);
       setStatus('error');
@@ -433,22 +450,75 @@ export default function RegistrationForm({ onBack }) {
                 )}
               </div>
 
-              <div className="relative pt-1">
-                <input
-                  type="text"
-                  value={p.name}
-                  onChange={(e) => handlePersonChange(index, 'name', e.target.value)}
-                  placeholder=" "
-                  disabled={status === 'loading'}
-                  className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
-                    ${validationErrors[index]?.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
-                  required
-                />
-                <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
-                    ${validationErrors[index]?.name ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
-                  Full Name
-                </label>
-              </div>
+              {category === 'Schools' ? (
+                <>
+                  <div className="relative pt-1">
+                    <input
+                      type="text"
+                      value={p.schoolName}
+                      onChange={(e) => handlePersonChange(index, 'schoolName', e.target.value)}
+                      placeholder=" "
+                      disabled={status === 'loading'}
+                      className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
+                        ${validationErrors[index]?.schoolName ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+                      required
+                    />
+                    <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
+                        ${validationErrors[index]?.schoolName ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+                      School Name
+                    </label>
+                  </div>
+                  <div className="relative pt-1 mt-4">
+                    <input
+                      type="number"
+                      value={p.noOfStudents}
+                      onChange={(e) => handlePersonChange(index, 'noOfStudents', e.target.value)}
+                      placeholder=" "
+                      disabled={status === 'loading'}
+                      className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
+                        ${validationErrors[index]?.noOfStudents ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+                      required
+                    />
+                    <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
+                        ${validationErrors[index]?.noOfStudents ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+                      Confirmed No. of Students
+                    </label>
+                  </div>
+                  <div className="relative pt-1 mt-4">
+                    <input
+                      type="text"
+                      value={p.personResponsible}
+                      onChange={(e) => handlePersonChange(index, 'personResponsible', e.target.value)}
+                      placeholder=" "
+                      disabled={status === 'loading'}
+                      className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
+                        ${validationErrors[index]?.personResponsible ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+                      required
+                    />
+                    <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
+                        ${validationErrors[index]?.personResponsible ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+                      Person Responsible
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div className="relative pt-1">
+                  <input
+                    type="text"
+                    value={p.name}
+                    onChange={(e) => handlePersonChange(index, 'name', e.target.value)}
+                    placeholder=" "
+                    disabled={status === 'loading'}
+                    className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
+                      ${validationErrors[index]?.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+                    required
+                  />
+                  <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
+                      ${validationErrors[index]?.name ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+                    Full Name
+                  </label>
+                </div>
+              )}
 
               <div className="relative pt-1">
                 <input
@@ -463,7 +533,7 @@ export default function RegistrationForm({ onBack }) {
                 />
                 <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
                     ${(validationErrors[index]?.phone || (p.phone && getPhoneError(p.phone))) ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
-                  Phone Number
+                  {category === 'Schools' ? 'Contact' : 'Phone Number'}
                 </label>
                 <AnimatePresence>
                   {p.phone && getPhoneError(p.phone) && (
@@ -510,7 +580,7 @@ export default function RegistrationForm({ onBack }) {
         >
           <Plus className="w-4 h-4" /> Add Person
         </button>
-        
+
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -518,12 +588,12 @@ export default function RegistrationForm({ onBack }) {
         >
           <Upload className="w-4 h-4" /> Upload Excel
         </button>
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileUpload} 
-          accept=".xlsx, .xls, .csv" 
-          className="hidden" 
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          accept=".xlsx, .xls, .csv"
+          className="hidden"
         />
       </div>
 
@@ -559,16 +629,16 @@ export default function RegistrationForm({ onBack }) {
 
         {/* Progress indicator dots */}
         <div className="flex gap-3 mt-4">
-           {[0, 1, 2].map((i) => (
-             <motion.div 
-               key={i}
-               animate={{ 
-                 backgroundColor: loadingStage >= i ? '#f97316' : '#374151',
-                 scale: loadingStage === i ? 1.2 : 1
-               }}
-               className="w-2.5 h-2.5 rounded-full"
-             />
-           ))}
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              animate={{
+                backgroundColor: loadingStage >= i ? '#f97316' : '#374151',
+                scale: loadingStage === i ? 1.2 : 1
+              }}
+              className="w-2.5 h-2.5 rounded-full"
+            />
+          ))}
         </div>
       </motion.div>
     );

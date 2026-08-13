@@ -24,6 +24,53 @@ function doPost(e) {
     
     var lastCol = Math.max(sheet.getLastColumn(), 50); // Ensure we read far enough right
     
+    var targetStartCol = -1; // 1-indexed
+    var targetRow = 3;
+    var outputData = [];
+    var peopleArray = data.people || [];
+    
+    // Fallback for single payload
+    if (data.name && data.phone && peopleArray.length === 0) {
+      peopleArray.push({name: data.name, phone: data.phone, church: data.church || ""});
+    }
+
+    if (category === 'SCHOOLS') {
+      targetStartCol = 1;
+      var nameColIndex = 2; // Column B: SCHOOL
+      var maxDataRow = Math.max(3, sheet.getLastRow());
+      var nameColValues = sheet.getRange(3, nameColIndex, maxDataRow - 2, 1).getValues();
+      
+      for (var r = 0; r < nameColValues.length; r++) {
+        if (!nameColValues[r][0] || nameColValues[r][0].toString().trim() === "") {
+          targetRow = 3 + r;
+          break;
+        }
+        if (r === nameColValues.length - 1) {
+          targetRow = 3 + r + 1;
+        }
+      }
+      
+      if (peopleArray.length > 0) {
+        for (var i = 0; i < peopleArray.length; i++) {
+          var p = peopleArray[i];
+          var sn = (targetRow - 2) + i;
+          // For schools: [NO., SCHOOL, CONFIRMED NO. OF STUDENTS, PERSON RESPONSIBLE, CONTACT]
+          // Wait, the table in the screenshot is:
+          // A: NO.
+          // B: SCHOOL
+          // C: CONFIRMED NO. OF STUDENTS
+          // D: PERSON RESPONSIBLE
+          // E: CONTACT
+          // So it's 5 columns!
+          outputData.push([sn, p.schoolName || p.name, p.noOfStudents || "", p.personResponsible || "", p.phone || ""]);
+        }
+        sheet.getRange(targetRow, targetStartCol, outputData.length, 5).setValues(outputData);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // Read Row 1 (Location Headers) and Row 2 (Column Headers like "NO.")
     var row1 = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     var row2 = sheet.getRange(2, 1, 1, lastCol).getValues()[0];
@@ -87,11 +134,6 @@ function doPost(e) {
     }
     
     // 4. Prepare data for bulk write
-    var peopleArray = data.people || [];
-    if (data.name && data.phone) {
-      // Fallback for single payload
-      peopleArray.push({name: data.name, phone: data.phone, church: data.church || ""});
-    }
     
     if (peopleArray.length > 0) {
       var outputData = [];
@@ -118,8 +160,8 @@ function doPost(e) {
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    // We can fetch from all typical sheets where they might add dynamic locations
-    var sheetsToScan = ["CAMPUSES OUT OF ENTEBBE", "CENTRAL REGION", "EASTERN REGION", "WESTERN REGION", "NORTHERN REGION", "WEST NILE REGION", "ENTEBBE CAMPUSES", "RESIDENTIALS"];
+    // Fetch exclusively from the out of Entebbe campuses sheet so we don't mix in churches and residentials
+    var sheetsToScan = ["CAMPUSES OUT OF ENTEBBE"];
     var allLocations = [];
     
     for (var i = 0; i < sheetsToScan.length; i++) {
