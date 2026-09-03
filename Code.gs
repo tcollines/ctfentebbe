@@ -31,8 +31,37 @@ function doPost(e) {
     
     // Fallback for single payload
     if (data.name && data.phone && peopleArray.length === 0) {
-      peopleArray.push({name: data.name, phone: data.phone, church: data.church || ""});
+      peopleArray.push({name: data.name, phone: data.phone, church: data.church || "", soulsWon: data.soulsWon || false});
     }
+
+    // --- HANDLE SOULS WON ---
+    var soulsWonPeople = peopleArray.filter(function(p) { return p.soulsWon === true; });
+    if (soulsWonPeople.length > 0) {
+      var swSheet = spreadsheet.getSheetByName("SOULS WON");
+      if (swSheet) {
+        var maxSwRow = Math.max(4, swSheet.getLastRow() + 1);
+        var swNameColValues = swSheet.getRange(4, 2, Math.max(1, maxSwRow - 3), 1).getValues();
+        var swTargetRow = 4;
+        for (var sw = 0; sw < swNameColValues.length; sw++) {
+          if (!swNameColValues[sw][0] || swNameColValues[sw][0].toString().trim() === "") {
+            swTargetRow = 4 + sw;
+            break;
+          }
+          if (sw === swNameColValues.length - 1) {
+            swTargetRow = 4 + sw + 1;
+          }
+        }
+        var swOutputData = [];
+        for (var j = 0; j < soulsWonPeople.length; j++) {
+          var sp = soulsWonPeople[j];
+          var ssn = (swTargetRow - 3) + j;
+          var manifestLoc = sp.church ? sp.church : location;
+          swOutputData.push([ssn, sp.name, sp.phone, manifestLoc]);
+        }
+        swSheet.getRange(swTargetRow, 1, swOutputData.length, 4).setValues(swOutputData);
+      }
+    }
+    // ------------------------
 
     if (category === 'SCHOOLS') {
       targetStartCol = 1;

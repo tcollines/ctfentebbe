@@ -4,7 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRig
 import * as XLSX from 'xlsx';
 import { DATA, ALL_RESIDENCES } from './data';
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiPWcK2HFuul12LoAZj9nnfa-ddv470w8tCr8EHB6sQMTiRVU04awEG15iKJs0G9aOjw/exec"; // Wait for user to provide, or they will edit it.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOZ2P_I7BXj99ing86h7l4D_xijAyJIpYmUoyl7uY-ho5iGv1rUZ0jaXb8FXSdRnJXlQ/exec"; // Wait for user to provide, or they will edit it.
 
 export default function RegistrationForm({ onBack }) {
   const [step, setStep] = useState(1);
@@ -15,7 +15,7 @@ export default function RegistrationForm({ onBack }) {
   const [ministerName, setMinisterName] = useState('');
   const [ministerPhone, setMinisterPhone] = useState('');
 
-  const [people, setPeople] = useState([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '' }]);
+  const [people, setPeople] = useState([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '', soulsWon: false }]);
 
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [errorMessage, setErrorMessage] = useState('');
@@ -75,7 +75,7 @@ export default function RegistrationForm({ onBack }) {
   };
 
   const handleAddPerson = () => {
-    setPeople([...people, { name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '' }]);
+    setPeople([...people, { name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '', soulsWon: false }]);
     setValidationErrors([...validationErrors, {}]);
   };
 
@@ -101,6 +101,7 @@ export default function RegistrationForm({ onBack }) {
         let phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('contact') || h.includes('number') || h.includes('tel'));
         let churchIdx = headers.findIndex(h => h.includes('church') || h.includes('ministry'));
         let residenceIdx = headers.findIndex(h => h.includes('residence') || h.includes('location') || h.includes('place'));
+        let soulsWonIdx = headers.findIndex(h => h.includes('soul') || h.includes('won'));
 
         // Fallbacks if headers are generic or missing
         if (nameIdx === -1) nameIdx = 0; // Assume first column is name
@@ -117,7 +118,8 @@ export default function RegistrationForm({ onBack }) {
             name: row[nameIdx] ? String(row[nameIdx]).trim() : '',
             phone: row[phoneIdx] ? String(row[phoneIdx]).replace(/[^0-9+]/g, '').trim() : '',
             church: churchIdx !== -1 && row[churchIdx] ? String(row[churchIdx]).trim() : '',
-            residence: residenceIdx !== -1 && row[residenceIdx] ? String(row[residenceIdx]).trim() : ''
+            residence: residenceIdx !== -1 && row[residenceIdx] ? String(row[residenceIdx]).trim() : '',
+            soulsWon: soulsWonIdx !== -1 && row[soulsWonIdx] ? Boolean(String(row[soulsWonIdx]).match(/^(true|yes|y|1|won)$/i)) : false
           });
         }
 
@@ -192,7 +194,7 @@ export default function RegistrationForm({ onBack }) {
       setInstituteName('');
       setMinisterName('');
       setMinisterPhone('');
-      setPeople([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '' }]);
+      setPeople([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '', soulsWon: false }]);
       return;
     }
 
@@ -370,10 +372,10 @@ export default function RegistrationForm({ onBack }) {
     if (category === 'Bring 20') {
       return (
         <motion.form
-          onSubmit={(e) => { 
-            e.preventDefault(); 
+          onSubmit={(e) => {
+            e.preventDefault();
             if (getPhoneError(ministerPhone)) return;
-            setStep(4); 
+            setStep(4);
           }}
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
           className="space-y-6"
@@ -705,6 +707,19 @@ export default function RegistrationForm({ onBack }) {
                       ${validationErrors[index]?.church ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
                     Ministry / Church
                   </label>
+                </div>
+              )}
+
+              {category !== 'Schools' && (
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm font-medium text-gray-300">Souls Won</span>
+                  <button
+                    type="button"
+                    onClick={() => handlePersonChange(index, 'soulsWon', !p.soulsWon)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${p.soulsWon ? 'bg-orange-500' : 'bg-white/10'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${p.soulsWon ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
                 </div>
               )}
             </motion.div>
