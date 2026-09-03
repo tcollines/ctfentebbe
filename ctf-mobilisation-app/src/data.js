@@ -1,6 +1,7 @@
 export const DATA = {
   MANIFESTS: [
     "ENTEBBE",
+    "KAJJANSI",
     "BUGEMBO",
     "GOMBA",
     "KAKOOGE",

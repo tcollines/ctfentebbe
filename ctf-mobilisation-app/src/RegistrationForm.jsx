@@ -4,7 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRig
 import * as XLSX from 'xlsx';
 import { DATA, ALL_RESIDENCES } from './data';
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOZ2P_I7BXj99ing86h7l4D_xijAyJIpYmUoyl7uY-ho5iGv1rUZ0jaXb8FXSdRnJXlQ/exec"; // Wait for user to provide, or they will edit it.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby8IOvWIaNxyTiXAULykfiNihg6C7JZq3k58n_wNeHy0wwlpOfP9NpcLVB-SYx7Ktks4w/exec"; // Wait for user to provide, or they will edit it.
 
 export default function RegistrationForm({ onBack }) {
   const [step, setStep] = useState(1);
@@ -22,18 +22,23 @@ export default function RegistrationForm({ onBack }) {
   const [validationErrors, setValidationErrors] = useState([]); // array of objects matching people array
   const [loadingStage, setLoadingStage] = useState(0); // 0: compiling, 1: registering, 2: submitting
 
-  const [existingCampuses, setExistingCampuses] = useState([]);
+  const [existingBlocks, setExistingBlocks] = useState({});
 
   const fileInputRef = useRef(null);
 
   React.useEffect(() => {
-    // Silently fetch existing campuses in the background
+    // Silently fetch existing blocks in the background
     fetch(SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) setExistingCampuses(data);
+        if (data && typeof data === 'object' && !Array.isArray(data) && !data.status) {
+          setExistingBlocks(data);
+        } else if (Array.isArray(data)) {
+          // Fallback for old cached script response
+          setExistingBlocks({ 'CAMPUSES OUT OF ENTEBBE': data });
+        }
       })
-      .catch(err => console.error("Failed to fetch campuses", err));
+      .catch(err => console.error("Failed to fetch blocks", err));
   }, []);
 
   // ---------------------------------------------------------
@@ -51,7 +56,7 @@ export default function RegistrationForm({ onBack }) {
     setCategory(c);
     setSubOption('');
 
-    if (manifest !== 'ENTEBBE' && c === 'Residential') {
+    if (manifest !== 'ENTEBBE' && manifest !== 'KAJJANSI' && c === 'Residential') {
       // For Central Region Residential, location is the manifest itself. Skip step 3.
       setSubOption(manifest);
       setStep(4);
@@ -199,7 +204,7 @@ export default function RegistrationForm({ onBack }) {
     }
 
     if (step > 1 && status !== 'loading') {
-      if (step === 4 && manifest !== 'ENTEBBE' && category === 'Residential') {
+      if (step === 4 && manifest !== 'ENTEBBE' && manifest !== 'KAJJANSI' && category === 'Residential') {
         setStep(2); // Skipped step 3
       } else if (step === 4 && manifest === 'ENTEBBE' && category === 'Schools') {
         setStep(2); // Skipped step 3
@@ -268,6 +273,9 @@ export default function RegistrationForm({ onBack }) {
           backendCategory = 'BRING 20';
           backendLocation = ministerName;
         }
+      } else if (manifest === 'KAJJANSI') {
+        if (category === 'Residential') backendCategory = 'KAJJANSI RESIDENTIAL';
+        if (category === 'Campuses') backendCategory = 'KAJJANSI CAMPUSES';
       } else {
         if (category === 'Residential') backendCategory = 'CENTRAL REGION';
         if (category === 'Campuses') backendCategory = 'CAMPUSES OUT OF ENTEBBE';
@@ -443,7 +451,10 @@ export default function RegistrationForm({ onBack }) {
       if (category === 'Campuses') { options = DATA.ENTEBBE_CAMPUSES; placeholder = "Select Campus"; }
       if (category === 'Churches') { options = DATA.CHURCH_ROLES; placeholder = "Select Role"; }
     } else {
-      if (category === 'Campuses') { isInput = true; placeholder = "Enter Campus Name"; }
+      if (category === 'Campuses' || manifest === 'KAJJANSI') {
+        isInput = true;
+        placeholder = category === 'Residential' ? "Enter Residential Area" : "Enter Campus Name";
+      }
     }
 
     return (
@@ -468,8 +479,12 @@ export default function RegistrationForm({ onBack }) {
               required
             />
             <datalist id="campuses-list">
-              {existingCampuses.map((campus, idx) => (
-                <option key={idx} value={campus} />
+              {(
+                manifest === 'KAJJANSI' && category === 'Residential' ? existingBlocks['KAJJANSI RESIDENTIAL'] || [] :
+                  manifest === 'KAJJANSI' && category === 'Campuses' ? existingBlocks['KAJJANSI CAMPUSES'] || [] :
+                    existingBlocks['CAMPUSES OUT OF ENTEBBE'] || []
+              ).map((val, idx) => (
+                <option key={idx} value={val} />
               ))}
             </datalist>
             <label className="floating-label absolute text-gray-400 left-4 top-5.5 origin-left transition-all duration-200 pointer-events-none peer-focus:text-orange-500">

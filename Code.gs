@@ -222,31 +222,30 @@ function doPost(e) {
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    // Fetch exclusively from the out of Entebbe campuses sheet so we don't mix in churches and residentials
-    var sheetsToScan = ["CAMPUSES OUT OF ENTEBBE"];
-    var allLocations = [];
+    var sheetsToScan = ["CAMPUSES OUT OF ENTEBBE", "KAJJANSI RESIDENTIAL", "KAJJANSI CAMPUSES"];
+    var result = {};
     
     for (var i = 0; i < sheetsToScan.length; i++) {
-      var sheet = ss.getSheetByName(sheetsToScan[i]);
+      var sheetName = sheetsToScan[i];
+      var sheet = ss.getSheetByName(sheetName);
+      var locations = [];
       if (sheet) {
         var lastCol = Math.max(sheet.getLastColumn(), 50);
         var row1 = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
         
         for (var c = 0; c < row1.length; c++) {
           var val = row1[c] ? row1[c].toString().trim() : "";
-          // Ignore empty strings and summary table headers
-          if (val !== "" && val !== "NO." && val !== "MOBILIZED / NAME" && val !== "PHONE NUMBER" && val !== "RESIDENTIAL / CAMPUS / CHURCH") {
-            // Found a location block!
-            if (!allLocations.includes(val)) {
-              allLocations.push(val);
+          if (val !== "" && val !== "NO." && val !== "MOBILIZED / NAME" && val !== "PHONE NUMBER" && val !== "RESIDENTIAL / CAMPUS / CHURCH" && val !== "NAME" && val !== "INSTITUTE" && val !== "RESIDENTIAL") {
+            if (!locations.includes(val)) {
+              locations.push(val);
             }
           }
         }
       }
+      result[sheetName] = locations;
     }
     
-    // Return standard JSON but ensure CORS by relying on Google's default execution redirect
-    return ContentService.createTextOutput(JSON.stringify(allLocations))
+    return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch(error) {
