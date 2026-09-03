@@ -58,11 +58,9 @@ export const DATA = {
     "KISUBI",
     "KUBIS",
     "METEROLOGY",
-    "MILDMAY",
     "NKUMBA",
     "SKYVIEW",
     "ST. JOSEPH INSTITUTE",
-    "SYNERGY",
     "OTHER"
   ],
   CHURCH_ROLES: [
