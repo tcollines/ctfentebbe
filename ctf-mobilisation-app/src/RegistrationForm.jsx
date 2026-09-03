@@ -2,17 +2,20 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRight, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { DATA } from './data';
+import { DATA, ALL_RESIDENCES } from './data';
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9fzgMXgmY-MJ8FpQo8Mp_DaMH3R0PotG1i3nZ79EB85C3uGJL1hadbRNvTQZh1NlP/exec"; // Wait for user to provide, or they will edit it.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiPWcK2HFuul12LoAZj9nnfa-ddv470w8tCr8EHB6sQMTiRVU04awEG15iKJs0G9aOjw/exec"; // Wait for user to provide, or they will edit it.
 
 export default function RegistrationForm({ onBack }) {
   const [step, setStep] = useState(1);
   const [manifest, setManifest] = useState('');
   const [category, setCategory] = useState('');
   const [subOption, setSubOption] = useState(''); // Location/Campus/Role
+  const [instituteName, setInstituteName] = useState('');
+  const [ministerName, setMinisterName] = useState('');
+  const [ministerPhone, setMinisterPhone] = useState('');
 
-  const [people, setPeople] = useState([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '' }]);
+  const [people, setPeople] = useState([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '' }]);
 
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [errorMessage, setErrorMessage] = useState('');
@@ -56,6 +59,9 @@ export default function RegistrationForm({ onBack }) {
       // Schools don't have a sub-option, we collect school name per person
       setSubOption('Schools');
       setStep(4);
+    } else if (manifest === 'ENTEBBE' && c === 'Bring 20') {
+      setSubOption('Bring 20');
+      setStep(3);
     } else {
       setStep(3);
     }
@@ -69,7 +75,7 @@ export default function RegistrationForm({ onBack }) {
   };
 
   const handleAddPerson = () => {
-    setPeople([...people, { name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '' }]);
+    setPeople([...people, { name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '' }]);
     setValidationErrors([...validationErrors, {}]);
   };
 
@@ -94,10 +100,12 @@ export default function RegistrationForm({ onBack }) {
         let nameIdx = headers.findIndex(h => h.includes('name'));
         let phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('contact') || h.includes('number') || h.includes('tel'));
         let churchIdx = headers.findIndex(h => h.includes('church') || h.includes('ministry'));
+        let residenceIdx = headers.findIndex(h => h.includes('residence') || h.includes('location') || h.includes('place'));
 
         // Fallbacks if headers are generic or missing
         if (nameIdx === -1) nameIdx = 0; // Assume first column is name
         if (phoneIdx === -1) phoneIdx = 1; // Assume second column is phone
+        if (residenceIdx === -1 && category === 'Bring 20') residenceIdx = 2; // Assume 3rd column is residence for bring 20
 
         const newPeople = [];
         for (let i = 1; i < data.length; i++) {
@@ -108,7 +116,8 @@ export default function RegistrationForm({ onBack }) {
           newPeople.push({
             name: row[nameIdx] ? String(row[nameIdx]).trim() : '',
             phone: row[phoneIdx] ? String(row[phoneIdx]).replace(/[^0-9+]/g, '').trim() : '',
-            church: churchIdx !== -1 && row[churchIdx] ? String(row[churchIdx]).trim() : ''
+            church: churchIdx !== -1 && row[churchIdx] ? String(row[churchIdx]).trim() : '',
+            residence: residenceIdx !== -1 && row[residenceIdx] ? String(row[residenceIdx]).trim() : ''
           });
         }
 
@@ -180,7 +189,10 @@ export default function RegistrationForm({ onBack }) {
       setManifest('');
       setCategory('');
       setSubOption('');
-      setPeople([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '' }]);
+      setInstituteName('');
+      setMinisterName('');
+      setMinisterPhone('');
+      setPeople([{ name: '', phone: '', church: '', schoolName: '', noOfStudents: '', personResponsible: '', residence: '' }]);
       return;
     }
 
@@ -200,6 +212,12 @@ export default function RegistrationForm({ onBack }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'OTHER' && !instituteName.trim()) {
+      setErrorMessage("Please provide the Institute Name.");
+      setStatus('error');
+      return;
+    }
+
     // Validation
     const newErrors = people.map(p => {
       if (category === 'Schools') {
@@ -208,6 +226,13 @@ export default function RegistrationForm({ onBack }) {
           noOfStudents: !p.noOfStudents.trim(),
           personResponsible: !p.personResponsible.trim(),
           phone: !p.phone.trim() || !!getPhoneError(p.phone)
+        };
+      }
+      if (category === 'Bring 20') {
+        return {
+          name: !p.name.trim(),
+          phone: !p.phone.trim() || !!getPhoneError(p.phone),
+          residence: !p.residence.trim()
         };
       }
       return {
@@ -237,6 +262,10 @@ export default function RegistrationForm({ onBack }) {
         if (category === 'Campuses') backendCategory = 'ENTEBBE CAMPUSES';
         if (category === 'Churches') backendCategory = 'CHURCHES';
         if (category === 'Schools') backendCategory = 'SCHOOLS';
+        if (category === 'Bring 20') {
+          backendCategory = 'BRING 20';
+          backendLocation = ministerName;
+        }
       } else {
         if (category === 'Residential') backendCategory = 'CENTRAL REGION';
         if (category === 'Campuses') backendCategory = 'CAMPUSES OUT OF ENTEBBE';
@@ -249,7 +278,11 @@ export default function RegistrationForm({ onBack }) {
       const payload = {
         category: backendCategory,
         location: backendLocation,
-        people: people // Array of {name, phone, church}
+        ministerContact: ministerPhone,
+        people: people.map(p => ({
+          ...p,
+          church: (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'OTHER') ? instituteName : p.church
+        }))
       };
 
       // FIRE AND FORGET: Start the network request in the background
@@ -334,6 +367,71 @@ export default function RegistrationForm({ onBack }) {
   };
 
   const renderStep3 = () => {
+    if (category === 'Bring 20') {
+      return (
+        <motion.form
+          onSubmit={(e) => { 
+            e.preventDefault(); 
+            if (getPhoneError(ministerPhone)) return;
+            setStep(4); 
+          }}
+          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+          className="space-y-6"
+        >
+          <h3 className="text-lg font-medium text-white mb-4">Minister Details</h3>
+
+          <div className="relative pt-1">
+            <input
+              type="text"
+              value={ministerName}
+              onChange={(e) => setMinisterName(e.target.value)}
+              placeholder=" "
+              className="floating-input w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus:ring-1 transition-all peer text-sm"
+              required
+            />
+            <label className="floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm text-gray-400 peer-focus:text-orange-500">
+              Minister's Full Name
+            </label>
+          </div>
+
+          <div className="relative pt-1">
+            <input
+              type="tel"
+              value={ministerPhone}
+              onChange={(e) => setMinisterPhone(e.target.value)}
+              placeholder=" "
+              className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
+                ${(ministerPhone && getPhoneError(ministerPhone)) ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+              required
+            />
+            <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
+                ${(ministerPhone && getPhoneError(ministerPhone)) ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+              Minister's Phone Number
+            </label>
+            <AnimatePresence>
+              {ministerPhone && getPhoneError(ministerPhone) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="text-xs text-red-400 mt-1.5 ml-2 font-medium"
+                >
+                  {getPhoneError(ministerPhone)}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-medium rounded-xl px-4 py-3.5 transition-colors mt-4"
+          >
+            Continue
+          </button>
+        </motion.form>
+      );
+    }
+
     let options = [];
     let placeholder = "";
     let isInput = false;
@@ -410,12 +508,29 @@ export default function RegistrationForm({ onBack }) {
       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
       className="space-y-6"
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium text-white">Add People</h3>
         <span className="text-xs text-orange-400 font-medium bg-orange-500/10 px-2.5 py-1 rounded-md border border-orange-500/20">
           {category} • {subOption}
         </span>
       </div>
+
+      {manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'OTHER' && (
+        <div className="relative pt-1 mb-6">
+          <input
+            type="text"
+            value={instituteName}
+            onChange={(e) => setInstituteName(e.target.value)}
+            placeholder=" "
+            disabled={status === 'loading'}
+            className="floating-input w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all peer text-sm"
+            required
+          />
+          <label className="floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm text-gray-400 peer-focus:text-orange-500">
+            Institute Name
+          </label>
+        </div>
+      )}
 
       {status === 'error' && (
         <motion.div
@@ -548,6 +663,31 @@ export default function RegistrationForm({ onBack }) {
                   )}
                 </AnimatePresence>
               </div>
+
+              {category === 'Bring 20' && (
+                <div className="relative pt-1">
+                  <input
+                    type="text"
+                    list="residences-list"
+                    value={p.residence || ''}
+                    onChange={(e) => handlePersonChange(index, 'residence', e.target.value)}
+                    placeholder=" "
+                    disabled={status === 'loading'}
+                    className={`floating-input w-full bg-black/50 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-1 transition-all peer text-sm
+                      ${validationErrors[index]?.residence ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+                    required
+                  />
+                  <datalist id="residences-list">
+                    {ALL_RESIDENCES.map((res, idx) => (
+                      <option key={idx} value={res} />
+                    ))}
+                  </datalist>
+                  <label className={`floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm
+                      ${validationErrors[index]?.residence ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+                    Place of Residence
+                  </label>
+                </div>
+              )}
 
               {manifest === 'ENTEBBE' && category === 'Churches' && (
                 <div className="relative pt-1">

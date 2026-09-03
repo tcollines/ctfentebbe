@@ -24,7 +24,8 @@ export const DATA = {
     "Residentials",
     "Campuses",
     "Churches",
-    "Schools"
+    "Schools",
+    "Bring 20"
   ],
   OTHER_CATEGORIES: [
     "Residential",
@@ -60,10 +61,17 @@ export const DATA = {
     "NKUMBA",
     "SKYVIEW",
     "ST. JOSEPH INSTITUTE",
-    "SYNERGY"
+    "SYNERGY",
+    "OTHER"
   ],
   CHURCH_ROLES: [
     "Pastor",
     "Member"
   ]
 };
+
+// Create a combined list of all Entebbe residentials and campuses for the Bring 20 dropdown
+export const ALL_RESIDENCES = [
+  ...DATA.ENTEBBE_RESIDENTIALS,
+  ...DATA.ENTEBBE_CAMPUSES.filter(c => c !== "OTHER")
+].sort();

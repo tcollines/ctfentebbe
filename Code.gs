@@ -70,6 +70,39 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({status: "success"}))
         .setMimeType(ContentService.MimeType.JSON);
     }
+
+    if (category === 'BRING 20') {
+      targetStartCol = 1;
+      var nameColIndex = 4; // Column D: NAME (Member Name)
+      var maxDataRow = Math.max(4, sheet.getLastRow() + 1); // Row 3 is header, data starts at Row 4
+      
+      var nameColValues = sheet.getRange(4, nameColIndex, Math.max(1, maxDataRow - 3), 1).getValues();
+      var targetRow = 4;
+      
+      for (var r = 0; r < nameColValues.length; r++) {
+        if (!nameColValues[r][0] || nameColValues[r][0].toString().trim() === "") {
+          targetRow = 4 + r;
+          break;
+        }
+        if (r === nameColValues.length - 1) {
+          targetRow = 4 + r + 1;
+        }
+      }
+      
+      if (peopleArray.length > 0) {
+        var outputData = [];
+        for (var i = 0; i < peopleArray.length; i++) {
+          var p = peopleArray[i];
+          var sn = (targetRow - 3) + i;
+          // [NO., NAME (MIN), CONTACT (MIN), NAME, CONTACT, RESIDENCE]
+          outputData.push([sn, data.location, data.ministerContact || "", p.name || "", p.phone || "", p.residence || p.church || ""]);
+        }
+        sheet.getRange(targetRow, targetStartCol, outputData.length, 6).setValues(outputData);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     
     // Read Row 1 (Location Headers) and Row 2 (Column Headers like "NO.")
     var row1 = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
