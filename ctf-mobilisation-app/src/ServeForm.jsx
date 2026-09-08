@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, ChevronRight } from 'lucide-react';
 import { DATA, DEPARTMENTS } from './data';
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxT6ECu0cFglKrAFBPmf20MHuQsn414KcINBNdQMdVjuq9yknfkfMI_9vDnO9hxGQKtyg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygaAjFxtwQmnUK8qZN4mKSdV5g0OcV-4snozEXmGhHSWnfhaYrUTcgZR_ECBIoG9c2_w/exec";
 
 export default function ServeForm({ onBack }) {
   const [person, setPerson] = useState({ name: '', phone: '', manifest: '', customManifest: '', department: '' });
