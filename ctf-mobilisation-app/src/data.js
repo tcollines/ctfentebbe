@@ -74,3 +74,25 @@ export const ALL_RESIDENCES = [
   ...DATA.ENTEBBE_RESIDENTIALS,
   ...DATA.ENTEBBE_CAMPUSES.filter(c => c !== "OTHER")
 ].sort();
+
+export const DEPARTMENTS = [
+  "Media",
+  "Sales",
+  "Communications",
+  "Finance",
+  "Follow up",
+  "Hospital",
+  "Schools",
+  "Security and Parking",
+  "Set up",
+  "Choir",
+  "Projection and Sound",
+  "Ushering",
+  "Welfare",
+  "Protocol",
+  "Sanitation",
+  "Registration & Information",
+  "Transportation",
+  "First Aid",
+  "Testimonies"
+].sort();

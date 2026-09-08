@@ -187,7 +187,7 @@ export default function WelcomeScreen({ onNavigate }) {
 
       {/* Action Buttons */}
       <motion.div
-        className="flex flex-col sm:flex-row gap-4 mt-16"
+        className="flex flex-col gap-4 mt-16"
         style={{ zIndex: 30 }}
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: stage >= 4 ? 1 : 0, y: stage >= 4 ? 0 : 25 }}
@@ -195,9 +195,15 @@ export default function WelcomeScreen({ onNavigate }) {
       >
         <button
           onClick={() => onNavigate('entebbe')}
-          className="px-10 py-4 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold tracking-wide text-lg shadow-[0_0_20px_rgba(253,106,59,0.4)] transition-all hover:scale-105 active:scale-95 border border-orange-400/30"
+          className="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold tracking-wide text-base shadow-[0_0_20px_rgba(253,106,59,0.4)] transition-all hover:scale-105 active:scale-95 border border-orange-400/30"
         >
           Add Invited Member
+        </button>
+        <button
+          onClick={() => onNavigate('serve')}
+          className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white rounded-xl font-semibold tracking-wide text-base shadow-[0_0_20px_rgba(1,135,23,0.4)] transition-all hover:scale-105 active:scale-95 border border-green-400/30"
+        >
+          Register to Serve
         </button>
       </motion.div>
 

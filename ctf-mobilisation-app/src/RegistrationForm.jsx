@@ -4,7 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRig
 import * as XLSX from 'xlsx';
 import { DATA, ALL_RESIDENCES } from './data';
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby8IOvWIaNxyTiXAULykfiNihg6C7JZq3k58n_wNeHy0wwlpOfP9NpcLVB-SYx7Ktks4w/exec"; // Wait for user to provide, or they will edit it.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxT6ECu0cFglKrAFBPmf20MHuQsn414KcINBNdQMdVjuq9yknfkfMI_9vDnO9hxGQKtyg/exec"; // Wait for user to provide, or they will edit it.
 
 export default function RegistrationForm({ onBack }) {
   const [step, setStep] = useState(1);

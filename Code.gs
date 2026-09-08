@@ -133,6 +133,37 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    if (category === 'Serving Ministers') {
+      targetStartCol = 1;
+      var nameColIndex = 1; // Column A: NAME
+      var maxDataRow = Math.max(1, sheet.getLastRow()); // Row 1 is header
+      
+      var targetRow = 2;
+      var nameColValues = sheet.getRange(2, nameColIndex, Math.max(1, maxDataRow - 1), 1).getValues();
+      
+      for (var r = 0; r < nameColValues.length; r++) {
+        if (!nameColValues[r][0] || nameColValues[r][0].toString().trim() === "") {
+          targetRow = 2 + r;
+          break;
+        }
+        if (r === nameColValues.length - 1) {
+          targetRow = 2 + r + 1;
+        }
+      }
+      
+      if (peopleArray.length > 0) {
+        var outputData = [];
+        for (var i = 0; i < peopleArray.length; i++) {
+          var p = peopleArray[i];
+          // [NAME, CONTACT, MANIFEST LOCATION, DEPT]
+          outputData.push([p.name || "", p.phone || "", p.manifest || "", p.department || ""]);
+        }
+        sheet.getRange(targetRow, 1, outputData.length, 4).setValues(outputData);
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // Read Row 1 (Location Headers) and Row 2 (Column Headers like "NO.")
     var row1 = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     var row2 = sheet.getRange(2, 1, 1, lastCol).getValues()[0];

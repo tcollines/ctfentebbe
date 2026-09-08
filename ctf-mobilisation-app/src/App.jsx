@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import WelcomeScreen from './WelcomeScreen';
 import RegistrationForm from './RegistrationForm';
+import ServeForm from './ServeForm';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('welcome'); // 'welcome' | 'form'
-  const handleNavigateToForm = () => {
-    setCurrentPage('form');
+  const handleNavigate = (page) => {
+    setCurrentPage(page === 'entebbe' ? 'form' : page);
   };
 
   const handleBackToWelcome = () => {
@@ -40,7 +41,20 @@ export default function App() {
             transition={{ duration: 0.5 }}
             className="absolute inset-0"
           >
-            <WelcomeScreen onNavigate={handleNavigateToForm} />
+            <WelcomeScreen onNavigate={handleNavigate} />
+          </motion.div>
+        ) : currentPage === 'serve' ? (
+          <motion.div
+            key="serve"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 overflow-y-auto"
+          >
+            <ServeForm 
+              onBack={handleBackToWelcome}
+            />
           </motion.div>
         ) : (
           <motion.div
