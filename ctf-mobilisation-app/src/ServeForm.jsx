@@ -5,6 +5,25 @@ import { DATA, DEPARTMENTS } from './data';
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygaAjFxtwQmnUK8qZN4mKSdV5g0OcV-4snozEXmGhHSWnfhaYrUTcgZR_ECBIoG9c2_w/exec";
 
+const WHATSAPP_GROUPS = {
+  "Media": "https://chat.whatsapp.com/GYeAcEFQQw2BxI1LgDYGTM",
+  "Sales": "https://chat.whatsapp.com/Jn1yytZWduXCOqkxWK6OKB?s=sw&p=i&mlu=4&ilr=4",
+  "Finance": "https://chat.whatsapp.com/GQ0D8EVZMcdCJBVRIEa887",
+  "Follow up": "https://chat.whatsapp.com/Fd89Cj3R4hP5DgkpsvpSkY",
+  "Hospital": "https://chat.whatsapp.com/L6cKibupbE674mv7UVuUdC",
+  "Security and Parking": "https://chat.whatsapp.com/D1DGIa1jqaNLC1o5w6NvxU?s=cl&p=a&mlu=4",
+  "Set up": "https://chat.whatsapp.com/Gt5Hn4iQOPlJQCbxyspmJ2?s=cl&p=a&mlu=4&ilr=4",
+  "Projection and Sound": "https://chat.whatsapp.com/CknMbYcd9zc5JrOaMKP3a3?s=cl&p=a&mlu=4&ilr=4",
+  "Ushering": "https://chat.whatsapp.com/F1QjDhZJIAlI0TlvEoBfjY?s=sw&p=a&mlu=4&ilr=4",
+  "Welfare": "https://chat.whatsapp.com/DdHuyyMLBkwLvo5yiEJihw?s=cl&p=a&mlu=4&ilr=4",
+  "Protocol": "https://chat.whatsapp.com/DdHuyyMLBkwLvo5yiEJihw?s=cl&p=a&mlu=4&ilr=4",
+  "Sanitation": "https://chat.whatsapp.com/Gt5Hn4iQOPlJQCbxyspmJ2?s=cl&p=a&mlu=4&ilr=4",
+  "Registration & Information": "https://chat.whatsapp.com/LtEiKlnCdLl18wh3EOPyPI?s=cl&p=a&mlu=4&ilr=4",
+  "Transportation": "https://chat.whatsapp.com/CgDFZU4ouvh4NYTHCVAOxB?s=sw&p=i&mlu=4&ilr=4",
+  "First Aid": "https://chat.whatsapp.com/F5PmLLb7lKV7eBuwjd6VQN",
+  "Testimonies": "https://chat.whatsapp.com/ELiICyDXKmc61MFubM21rB?s=sh&p=a&mlu=4&ilr=4"
+};
+
 export default function ServeForm({ onBack }) {
   const [person, setPerson] = useState({ name: '', phone: '', manifest: '', customManifest: '', department: '' });
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
@@ -111,6 +130,18 @@ export default function ServeForm({ onBack }) {
       </motion.div>
       <h2 className="text-2xl font-bold text-white">Data Submitted!</h2>
       <p className="text-gray-300 text-sm">Successfully recorded the minister.</p>
+      
+      {WHATSAPP_GROUPS[person.department] && (
+        <a
+          href={WHATSAPP_GROUPS[person.department]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 px-6 py-3 bg-[#25D366] hover:bg-[#20b858] text-white font-medium rounded-xl transition-colors shadow-lg shadow-[#25D366]/20 flex items-center gap-2"
+        >
+          Join WhatsApp Group
+        </a>
+      )}
+
       <button
         onClick={handleGoBack}
         className="mt-6 px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition-colors backdrop-blur-sm"
