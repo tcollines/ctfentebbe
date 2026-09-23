@@ -219,8 +219,8 @@ export default function RegistrationForm({ onBack }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'OTHER' && !instituteName.trim()) {
-      setErrorMessage("Please provide the Institute Name.");
+    if (manifest === 'ENTEBBE' && category === 'Campuses' && (subOption === 'OTHER' || subOption === 'ALUMNI') && !instituteName.trim()) {
+      setErrorMessage(subOption === 'ALUMNI' ? "Please provide the Institution." : "Please provide the Institute Name.");
       setStatus('error');
       return;
     }
@@ -291,7 +291,7 @@ export default function RegistrationForm({ onBack }) {
         ministerContact: ministerPhone,
         people: people.map(p => ({
           ...p,
-          church: (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'OTHER') ? instituteName : p.church
+          church: (manifest === 'ENTEBBE' && category === 'Campuses' && (subOption === 'OTHER' || subOption === 'ALUMNI')) ? instituteName : p.church
         }))
       };
 
@@ -532,7 +532,7 @@ export default function RegistrationForm({ onBack }) {
         </span>
       </div>
 
-      {manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'OTHER' && (
+      {manifest === 'ENTEBBE' && category === 'Campuses' && (subOption === 'OTHER' || subOption === 'ALUMNI') && (
         <div className="relative pt-1 mb-6">
           <input
             type="text"
@@ -544,7 +544,7 @@ export default function RegistrationForm({ onBack }) {
             required
           />
           <label className="floating-label absolute left-4 top-3.5 origin-left transition-all duration-200 pointer-events-none text-sm text-gray-400 peer-focus:text-orange-500">
-            Institute Name
+            {subOption === 'ALUMNI' ? 'Institution' : 'Institute Name'}
           </label>
         </div>
       )}

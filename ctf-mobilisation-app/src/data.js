@@ -61,6 +61,7 @@ export const DATA = {
     "NKUMBA",
     "SKYVIEW",
     "ST. JOSEPH INSTITUTE",
+    "ALUMNI",
     "OTHER"
   ],
   CHURCH_ROLES: [
@@ -72,7 +73,7 @@ export const DATA = {
 // Create a combined list of all Entebbe residentials and campuses for the Bring 20 dropdown
 export const ALL_RESIDENCES = [
   ...DATA.ENTEBBE_RESIDENTIALS,
-  ...DATA.ENTEBBE_CAMPUSES.filter(c => c !== "OTHER")
+  ...DATA.ENTEBBE_CAMPUSES.filter(c => c !== "OTHER" && c !== "ALUMNI")
 ].sort();
 
 export const DEPARTMENTS = [
