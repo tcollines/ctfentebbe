@@ -219,7 +219,7 @@ export default function RegistrationForm({ onBack }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (manifest === 'ENTEBBE' && category === 'Campuses' && (subOption === 'OTHER' || subOption === 'ALUMNI') && !instituteName.trim()) {
+    if ((subOption.toUpperCase() === 'OTHER' || (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) && !instituteName.trim()) {
       setErrorMessage(subOption === 'ALUMNI' ? "Please provide the Institution." : "Please provide the Institute Name.");
       setStatus('error');
       return;
@@ -264,6 +264,10 @@ export default function RegistrationForm({ onBack }) {
       let backendCategory = '';
       let backendLocation = subOption;
 
+      if (subOption.toUpperCase() === 'OTHER') {
+        backendLocation = instituteName;
+      }
+
       if (manifest === 'ENTEBBE') {
         if (category === 'Residentials') backendCategory = 'RESIDENTIALS';
         if (category === 'Campuses') backendCategory = 'ENTEBBE CAMPUSES';
@@ -291,7 +295,7 @@ export default function RegistrationForm({ onBack }) {
         ministerContact: ministerPhone,
         people: people.map(p => ({
           ...p,
-          church: (manifest === 'ENTEBBE' && category === 'Campuses' && (subOption === 'OTHER' || subOption === 'ALUMNI')) ? instituteName : p.church
+          church: (subOption.toUpperCase() === 'OTHER' || (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) ? instituteName : p.church
         }))
       };
 
@@ -532,7 +536,7 @@ export default function RegistrationForm({ onBack }) {
         </span>
       </div>
 
-      {manifest === 'ENTEBBE' && category === 'Campuses' && (subOption === 'OTHER' || subOption === 'ALUMNI') && (
+      {((subOption.toUpperCase() === 'OTHER') || (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) && (
         <div className="relative pt-1 mb-6">
           <input
             type="text"
