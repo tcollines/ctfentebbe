@@ -119,9 +119,16 @@ export default function RegistrationForm({ onBack }) {
           // Skip completely empty rows
           if (!row || row.length === 0 || (!row[nameIdx] && !row[phoneIdx])) continue;
 
+          let parsedPhone = row[phoneIdx] ? String(row[phoneIdx]).replace(/[^0-9+]/g, '').trim() : '';
+          
+          // Fix leading zero if stripped by Excel (e.g. 772123456 -> 0772123456)
+          if (parsedPhone.length === 9 && parsedPhone.startsWith('7')) {
+            parsedPhone = '0' + parsedPhone;
+          }
+
           newPeople.push({
             name: row[nameIdx] ? String(row[nameIdx]).trim() : '',
-            phone: row[phoneIdx] ? String(row[phoneIdx]).replace(/[^0-9+]/g, '').trim() : '',
+            phone: parsedPhone,
             church: churchIdx !== -1 && row[churchIdx] ? String(row[churchIdx]).trim() : '',
             residence: residenceIdx !== -1 && row[residenceIdx] ? String(row[residenceIdx]).trim() : '',
             soulsWon: soulsWonIdx !== -1 && row[soulsWonIdx] ? Boolean(String(row[soulsWonIdx]).match(/^(true|yes|y|1|won)$/i)) : false
