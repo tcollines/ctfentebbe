@@ -42,6 +42,7 @@ export const DATA = {
     "KABALE-KIWAFU",
     "KASENYI",
     "KATABI",
+    "KIGUNGU",
     "KITARA-KISUBI",
     "KITOORO",
     "KITUBULU",
