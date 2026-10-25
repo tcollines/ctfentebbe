@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, ChevronRight } from 'lucide-react';
 import { DATA, DEPARTMENTS } from './data';
-
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygaAjFxtwQmnUK8qZN4mKSdV5g0OcV-4snozEXmGhHSWnfhaYrUTcgZR_ECBIoG9c2_w/exec";
+import { submitToSheet } from './sheetApi';
 
 const WHATSAPP_GROUPS = {
   "Media": "https://chat.whatsapp.com/GYeAcEFQQw2BxI1LgDYGTM",
@@ -103,19 +102,12 @@ export default function ServeForm({ onBack }) {
     };
 
     try {
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      }).catch(err => console.error("Network request failed", err));
-
-      // Simulate network request UI
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait for the sheet to confirm the save; only then show success
+      await submitToSheet(payload);
       setStatus('success');
     } catch (error) {
       console.error('Error submitting form:', error);
-      setErrorMessage("A network error occurred. Please try again.");
+      setErrorMessage(error.message || "A network error occurred. Please try again.");
       setStatus('error');
     }
   };

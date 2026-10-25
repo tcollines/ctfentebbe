@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRight, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { DATA, ALL_RESIDENCES, CENTRAL_MANIFESTS } from './data';
-
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygaAjFxtwQmnUK8qZN4mKSdV5g0OcV-4snozEXmGhHSWnfhaYrUTcgZR_ECBIoG9c2_w/exec"; // Wait for user to provide, or they will edit it.
+import { SCRIPT_URL, submitToSheet } from './sheetApi';
 
 // Registration steps. Not every path visits every step (see flowSteps inside the component).
 const STEP_LOCATION = 1; // Entebbe / Kajjansi / Central Region / Other Regions
@@ -362,10 +361,7 @@ export default function RegistrationForm({ onBack }) {
         if (category === 'Campuses') backendCategory = 'CAMPUSES OUT OF ENTEBBE';
       }
 
-      // Submit each person sequentially (or with Promise.all)
-      // Since it's a simple script, sequential might be safer for sheet row locking
-      // Simulated progress steps for better UX during wait
-      // Send all people in ONE single request!
+      // Send all people in ONE single request
       const payload = {
         category: backendCategory,
         location: backendLocation,
@@ -376,25 +372,18 @@ export default function RegistrationForm({ onBack }) {
         }))
       };
 
-      // FIRE AND FORGET: Start the network request in the background
-      // This prevents the user from being blocked for 40+ seconds if Google is slow.
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Required for Google Apps Script to bypass CORS redirect issues
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      }).catch(err => console.error("Network request failed", err));
-
-      // BEAUTIFUL CONTROLLED UI EXPERIENCE
-      // We manually step through the UI phases for exactly 4.5 seconds to ensure a fast, premium feel.
+      // Wait for the sheet to confirm the save. The progress text steps along while we wait,
+      // and success only shows once the save is confirmed; any failure shows an error below.
       setLoadingStage(0);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setLoadingStage(1);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setLoadingStage(2);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const stageTimers = [
+        setTimeout(() => setLoadingStage(1), 1500),
+        setTimeout(() => setLoadingStage(2), 3000),
+      ];
+      try {
+        await submitToSheet(payload);
+      } finally {
+        stageTimers.forEach(clearTimeout);
+      }
 
       setStatus('success');
 
