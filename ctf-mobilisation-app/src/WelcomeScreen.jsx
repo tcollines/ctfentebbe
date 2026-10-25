@@ -96,8 +96,8 @@ export default function WelcomeScreen({ onNavigate }) {
             transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
           >
             <img 
-              src="/Official%20CTF%20Entebbe.jpeg" 
-              alt="CTF Entebbe Flyer" 
+              src="/ctf-entebbe-2026-flyer.jpg" 
+              alt="Catch The Fire 2026, Entebbe Edition: Fri 6th Nov 2026, 2PM EAT, Nkumba University Pitch" 
               className="w-full h-full object-cover"
               onError={(e) => {
                 e.target.style.display = 'none';
