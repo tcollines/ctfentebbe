@@ -1,4 +1,21 @@
+// Only one submission is written at a time, so two people saving at the same moment
+// can't be given the same empty rows and overwrite each other.
 function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(60000);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: "Server busy, please try again"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  try {
+    return handlePost_(e);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handlePost_(e) {
   try {
     // Parse the incoming JSON data
     var data = JSON.parse(e.postData.contents);
@@ -22,7 +39,7 @@ function doPost(e) {
       if (location === 'Member') location = 'MEMBERS- CTF ENTEBBE';
     }
     
-    var lastCol = Math.max(sheet.getLastColumn(), 50); // Ensure we read far enough right
+    var lastCol = Math.min(Math.max(sheet.getLastColumn(), 50), sheet.getMaxColumns()); // Read far enough right, but not past the sheet's edge
     
     var targetStartCol = -1; // 1-indexed
     var targetRow = 3;
@@ -33,35 +50,6 @@ function doPost(e) {
     if (data.name && data.phone && peopleArray.length === 0) {
       peopleArray.push({name: data.name, phone: data.phone, church: data.church || "", soulsWon: data.soulsWon || false});
     }
-
-    // --- HANDLE SOULS WON ---
-    var soulsWonPeople = peopleArray.filter(function(p) { return p.soulsWon === true; });
-    if (soulsWonPeople.length > 0) {
-      var swSheet = spreadsheet.getSheetByName("SOULS WON");
-      if (swSheet) {
-        var maxSwRow = Math.max(4, swSheet.getLastRow() + 1);
-        var swNameColValues = swSheet.getRange(4, 2, Math.max(1, maxSwRow - 3), 1).getValues();
-        var swTargetRow = 4;
-        for (var sw = 0; sw < swNameColValues.length; sw++) {
-          if (!swNameColValues[sw][0] || swNameColValues[sw][0].toString().trim() === "") {
-            swTargetRow = 4 + sw;
-            break;
-          }
-          if (sw === swNameColValues.length - 1) {
-            swTargetRow = 4 + sw + 1;
-          }
-        }
-        var swOutputData = [];
-        for (var j = 0; j < soulsWonPeople.length; j++) {
-          var sp = soulsWonPeople[j];
-          var ssn = (swTargetRow - 3) + j;
-          var manifestLoc = sp.church ? sp.church : location;
-          swOutputData.push([ssn, sp.name, sp.phone, manifestLoc]);
-        }
-        swSheet.getRange(swTargetRow, 1, swOutputData.length, 4).setValues(swOutputData);
-      }
-    }
-    // ------------------------
 
     if (category === 'SCHOOLS') {
       targetStartCol = 1;
@@ -93,7 +81,9 @@ function doPost(e) {
           // So it's 5 columns!
           outputData.push([sn, p.schoolName || p.name, p.noOfStudents || "", p.personResponsible || "", p.phone || ""]);
         }
+        setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [targetStartCol + 4]);
         sheet.getRange(targetRow, targetStartCol, outputData.length, 5).setValues(outputData);
+        writeSoulsWon_(spreadsheet, peopleArray, location);
       }
       
       return ContentService.createTextOutput(JSON.stringify({status: "success"}))
@@ -126,7 +116,9 @@ function doPost(e) {
           // [NO., NAME (MIN), CONTACT (MIN), NAME, CONTACT, RESIDENCE]
           outputData.push([sn, data.location, data.ministerContact || "", p.name || "", p.phone || "", p.residence || p.church || ""]);
         }
+        setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [targetStartCol + 2, targetStartCol + 4]);
         sheet.getRange(targetRow, targetStartCol, outputData.length, 6).setValues(outputData);
+        writeSoulsWon_(spreadsheet, peopleArray, location);
       }
       
       return ContentService.createTextOutput(JSON.stringify({status: "success"}))
@@ -158,7 +150,9 @@ function doPost(e) {
           // [NAME, CONTACT, MANIFEST LOCATION, DEPT]
           outputData.push([p.name || "", p.phone || "", p.manifest || "", p.department || ""]);
         }
+        setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [2]);
         sheet.getRange(targetRow, 1, outputData.length, 4).setValues(outputData);
+        writeSoulsWon_(spreadsheet, peopleArray, location);
       }
       return ContentService.createTextOutput(JSON.stringify({status: "success"}))
         .setMimeType(ContentService.MimeType.JSON);
@@ -171,8 +165,8 @@ function doPost(e) {
     var targetStartCol = -1; // 1-indexed
     var locationStr = location.toString().trim().toUpperCase();
     
-    // 1. Search for the location block in Row 1
-    for (var c = 0; c < row1.length; c++) {
+    // 1. Search for the location block in Row 1 (blocks start at column F; A-E is the summary table)
+    for (var c = 5; c < row1.length; c++) {
       if (row1[c] && row1[c].toString().trim().toUpperCase() === locationStr) {
         targetStartCol = c + 1; // Found existing block
         break;
@@ -197,6 +191,11 @@ function doPost(e) {
       }
     }
     
+    // 2b. No empty block left: add a new block to the right of the last one instead of failing
+    if (targetStartCol === -1) {
+      targetStartCol = addBlock_(sheet, row2, locationStr);
+    }
+
     if (targetStartCol === -1) {
       return ContentService.createTextOutput(JSON.stringify({status: "error", message: "Could not find a valid column block for " + location}))
         .setMimeType(ContentService.MimeType.JSON);
@@ -238,7 +237,9 @@ function doPost(e) {
       }
       
       // Bulk write all people at once! (Extremely fast)
+      setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [targetStartCol + 2]);
       sheet.getRange(targetRow, targetStartCol, outputData.length, 4).setValues(outputData);
+      writeSoulsWon_(spreadsheet, peopleArray, location);
     }
     
     return ContentService.createTextOutput(JSON.stringify({status: "success"}))
@@ -253,7 +254,7 @@ function doPost(e) {
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheetsToScan = ["CAMPUSES OUT OF ENTEBBE", "KAJJANSI RESIDENTIAL", "KAJJANSI CAMPUSES"];
+    var sheetsToScan = ["CAMPUSES OUT OF ENTEBBE", "KAJJANSI RESIDENTIAL", "KAJJANSI CAMPUSES", "OTHER REGIONS"];
     var result = {};
     
     for (var i = 0; i < sheetsToScan.length; i++) {
@@ -261,10 +262,10 @@ function doGet(e) {
       var sheet = ss.getSheetByName(sheetName);
       var locations = [];
       if (sheet) {
-        var lastCol = Math.max(sheet.getLastColumn(), 50);
+        var lastCol = Math.min(Math.max(sheet.getLastColumn(), 50), sheet.getMaxColumns());
         var row1 = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
         
-        for (var c = 0; c < row1.length; c++) {
+        for (var c = 5; c < row1.length; c++) { // blocks start at column F
           var val = row1[c] ? row1[c].toString().trim() : "";
           if (val !== "" && val !== "NO." && val !== "MOBILIZED / NAME" && val !== "PHONE NUMBER" && val !== "RESIDENTIAL / CAMPUS / CHURCH" && val !== "NAME" && val !== "INSTITUTE" && val !== "RESIDENTIAL") {
             if (!locations.includes(val)) {
@@ -283,4 +284,68 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({status: "error", message: error.toString()}))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// Format phone-number cells as plain text before writing, so numbers like 0772... keep their leading 0.
+// Only phone columns are changed: the NO. columns stay numbers because the summary COUNT formulas need them.
+function setPhoneColumnsAsText_(sheet, row, numRows, cols) {
+  for (var i = 0; i < cols.length; i++) {
+    sheet.getRange(row, cols[i], numRows, 1).setNumberFormat('@');
+  }
+}
+
+// Adds a new 4-column block to the right of the last block on the sheet, copying the title banner and
+// column headers (rows 1-2) of the last block, and titles it. Returns the new block's column, or -1.
+function addBlock_(sheet, row2, title) {
+  var blockCols = [];
+  for (var c = 5; c < row2.length; c++) {
+    if (row2[c] && row2[c].toString().trim().toUpperCase() === "NO.") blockCols.push(c + 1);
+  }
+  if (blockCols.length === 0) return -1;
+
+  var lastBlockCol = blockCols[blockCols.length - 1];
+  // Keep the sheet's spacing between blocks (4 columns + 1 spacer = 5 on most tabs)
+  var stride = blockCols.length > 1 ? lastBlockCol - blockCols[blockCols.length - 2] : 5;
+  if (stride < 4) stride = 5;
+  var newCol = lastBlockCol + stride;
+
+  var missing = (newCol + 3) - sheet.getMaxColumns();
+  if (missing > 0) sheet.insertColumnsAfter(sheet.getMaxColumns(), missing);
+
+  sheet.getRange(1, lastBlockCol, 2, 4).copyTo(sheet.getRange(1, newCol, 2, 4));
+  sheet.getRange(1, newCol).setValue(title);
+  return newCol;
+}
+
+// Adds everyone marked "Souls Won" to the SOULS WON tab. Called only after the main save has succeeded,
+// so a failed save followed by a retry doesn't create duplicate Souls Won rows.
+function writeSoulsWon_(spreadsheet, peopleArray, location) {
+  var soulsWonPeople = peopleArray.filter(function(p) { return p.soulsWon === true; });
+  if (soulsWonPeople.length === 0) return;
+
+  var swSheet = spreadsheet.getSheetByName("SOULS WON");
+  if (!swSheet) return;
+
+  var maxSwRow = Math.max(4, swSheet.getLastRow() + 1);
+  var swNameColValues = swSheet.getRange(4, 2, Math.max(1, maxSwRow - 3), 1).getValues();
+  var swTargetRow = 4;
+  for (var sw = 0; sw < swNameColValues.length; sw++) {
+    if (!swNameColValues[sw][0] || swNameColValues[sw][0].toString().trim() === "") {
+      swTargetRow = 4 + sw;
+      break;
+    }
+    if (sw === swNameColValues.length - 1) {
+      swTargetRow = 4 + sw + 1;
+    }
+  }
+
+  var swOutputData = [];
+  for (var j = 0; j < soulsWonPeople.length; j++) {
+    var sp = soulsWonPeople[j];
+    var ssn = (swTargetRow - 3) + j;
+    var manifestLoc = sp.church ? sp.church : location;
+    swOutputData.push([ssn, sp.name, sp.phone, manifestLoc]);
+  }
+  setPhoneColumnsAsText_(swSheet, swTargetRow, swOutputData.length, [3]);
+  swSheet.getRange(swTargetRow, 1, swOutputData.length, 4).setValues(swOutputData);
 }

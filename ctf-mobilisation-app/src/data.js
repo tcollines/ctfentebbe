@@ -10,7 +10,7 @@ export const DATA = {
     "KITWE",
     "KIWOKO",
     "KYANKWANZI",
-    "LUGAZI",
+    "LUGAZI/BUIKWE",
     "LUWEERO",
     "MITYANA",
     "MPIGI",
@@ -20,6 +20,15 @@ export const DATA = {
     "NDEJJE",
     "SECRETARIAT",
     "SEMUTO"
+  ],
+  // First screen of the Registration flow.
+  // CENTRAL REGION holds every manifest above except Entebbe and Kajjansi (see CENTRAL_MANIFESTS).
+  // OTHER REGIONS lets the user type in a manifest name that is not on the list.
+  LOCATIONS: [
+    "ENTEBBE",
+    "KAJJANSI",
+    "CENTRAL REGION",
+    "OTHER REGIONS"
   ],
   ENTEBBE_CATEGORIES: [
     "Residentials",
@@ -49,7 +58,6 @@ export const DATA = {
     "LUGONJO",
     "LYAMUTUNDWE",
     "MPALA-BUBULI",
-    "NAKIWOGO-BANGA",
     "NKUMBA",
     "NSAMIZI-LUNYO"
   ],
@@ -70,6 +78,9 @@ export const DATA = {
     "Member"
   ]
 };
+
+// Manifests listed under "Central Region" in the Registration flow (Bugembo to Semuto)
+export const CENTRAL_MANIFESTS = DATA.MANIFESTS.filter(m => m !== 'ENTEBBE' && m !== 'KAJJANSI');
 
 // Create a combined list of all Entebbe residentials and campuses for the Bring 20 dropdown
 export const ALL_RESIDENCES = [

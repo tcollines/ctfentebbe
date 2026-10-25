@@ -2,13 +2,27 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRight, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { DATA, ALL_RESIDENCES } from './data';
+import { DATA, ALL_RESIDENCES, CENTRAL_MANIFESTS } from './data';
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygaAjFxtwQmnUK8qZN4mKSdV5g0OcV-4snozEXmGhHSWnfhaYrUTcgZR_ECBIoG9c2_w/exec"; // Wait for user to provide, or they will edit it.
 
+// Registration steps. Not every path visits every step (see flowSteps inside the component).
+const STEP_LOCATION = 1; // Entebbe / Kajjansi / Central Region / Other Regions
+const STEP_MANIFEST = 2; // Central Region: pick a manifest. Other Regions: type the manifest name
+const STEP_CATEGORY = 3; // Residential / Campuses / Churches / ...
+const STEP_DETAILS = 4;  // Residential area, campus, church role or minister details
+const STEP_PEOPLE = 5;   // Add people and submit
+
+const REGIONAL_LOCATIONS = ['CENTRAL REGION', 'OTHER REGIONS'];
+
+const toTitleCase = (s) => s.charAt(0) + s.slice(1).toLowerCase();
+
 export default function RegistrationForm({ onBack }) {
-  const [step, setStep] = useState(1);
-  const [manifest, setManifest] = useState('');
+  const [step, setStep] = useState(STEP_LOCATION);
+  const [region, setRegion] = useState(''); // Option picked on the first screen (DATA.LOCATIONS)
+  const [manifest, setManifest] = useState(''); // Actual manifest, e.g. ENTEBBE, BUGEMBO or a typed Other Regions name
+  const [otherManifestName, setOtherManifestName] = useState('');
+  const [manifestError, setManifestError] = useState('');
   const [category, setCategory] = useState('');
   const [subOption, setSubOption] = useState(''); // Location/Campus/Role
   const [instituteName, setInstituteName] = useState('');
@@ -25,6 +39,21 @@ export default function RegistrationForm({ onBack }) {
   const [existingBlocks, setExistingBlocks] = useState({});
 
   const fileInputRef = useRef(null);
+
+  const isRegional = REGIONAL_LOCATIONS.includes(region);
+  // Central Region / Other Regions residential and Entebbe schools go straight from category to people
+  const skipsDetails = (isRegional && category === 'Residential') || (region === 'ENTEBBE' && category === 'Schools');
+  const flowSteps = [
+    STEP_LOCATION,
+    ...(isRegional ? [STEP_MANIFEST] : []),
+    STEP_CATEGORY,
+    ...(skipsDetails ? [] : [STEP_DETAILS]),
+    STEP_PEOPLE
+  ];
+
+  // Existing block names on a sheet (for autocomplete), without the sheet's title banner
+  const blockSuggestions = (sheetName) =>
+    (existingBlocks[sheetName] || []).filter(v => String(v).trim().toUpperCase() !== 'CATCH THE FIRE ENTEBBE');
 
   React.useEffect(() => {
     // Silently fetch existing blocks in the background
@@ -45,37 +74,76 @@ export default function RegistrationForm({ onBack }) {
   // Handlers
   // ---------------------------------------------------------
 
+  const handleLocationSelect = (loc) => {
+    setRegion(loc);
+    setCategory('');
+    setSubOption('');
+    setManifestError('');
+
+    if (REGIONAL_LOCATIONS.includes(loc)) {
+      // Central Region: pick a manifest from the list. Other Regions: type the manifest name.
+      setManifest('');
+      setStep(STEP_MANIFEST);
+    } else {
+      // Entebbe and Kajjansi are manifests in their own right
+      setManifest(loc);
+      setStep(STEP_CATEGORY);
+    }
+  };
+
   const handleManifestSelect = (m) => {
     setManifest(m);
     setCategory('');
     setSubOption('');
-    setStep(2);
+    setStep(STEP_CATEGORY);
+  };
+
+  const handleOtherManifestSubmit = (e) => {
+    e.preventDefault();
+    const name = otherManifestName.trim().replace(/\s+/g, ' ').toUpperCase();
+    if (!name) return;
+
+    // Keep listed manifests in their own sheets
+    if (name === 'ENTEBBE' || name === 'KAJJANSI') {
+      setManifestError(`${name} has its own option. Go back and select it there.`);
+      return;
+    }
+    // Also catch either half of a combined name such as LUGAZI/BUIKWE
+    const centralMatch = CENTRAL_MANIFESTS.find(m => m === name || m.split('/').includes(name));
+    if (centralMatch) {
+      setManifestError(`${centralMatch} is under Central Region. Go back and select it there.`);
+      return;
+    }
+
+    setManifestError('');
+    setOtherManifestName(name);
+    handleManifestSelect(name);
   };
 
   const handleCategorySelect = (c) => {
     setCategory(c);
     setSubOption('');
 
-    if (manifest !== 'ENTEBBE' && manifest !== 'KAJJANSI' && c === 'Residential') {
-      // For Central Region Residential, location is the manifest itself. Skip step 3.
+    if (isRegional && c === 'Residential') {
+      // For Central Region / Other Regions Residential, location is the manifest itself. Skip the details step.
       setSubOption(manifest);
-      setStep(4);
-    } else if (manifest === 'ENTEBBE' && c === 'Schools') {
+      setStep(STEP_PEOPLE);
+    } else if (region === 'ENTEBBE' && c === 'Schools') {
       // Schools don't have a sub-option, we collect school name per person
       setSubOption('Schools');
-      setStep(4);
-    } else if (manifest === 'ENTEBBE' && c === 'Bring 20') {
+      setStep(STEP_PEOPLE);
+    } else if (region === 'ENTEBBE' && c === 'Bring 20') {
       setSubOption('Bring 20');
-      setStep(3);
+      setStep(STEP_DETAILS);
     } else {
-      setStep(3);
+      setStep(STEP_DETAILS);
     }
   };
 
   const handleSubOptionSubmit = (e) => {
     e.preventDefault();
     if (subOption.trim()) {
-      setStep(4);
+      setStep(STEP_PEOPLE);
     }
   };
 
@@ -199,8 +267,11 @@ export default function RegistrationForm({ onBack }) {
   const handleGoBack = () => {
     if (status === 'success') {
       setStatus('idle');
-      setStep(1);
+      setStep(STEP_LOCATION);
+      setRegion('');
       setManifest('');
+      setOtherManifestName('');
+      setManifestError('');
       setCategory('');
       setSubOption('');
       setInstituteName('');
@@ -210,15 +281,11 @@ export default function RegistrationForm({ onBack }) {
       return;
     }
 
-    if (step > 1 && status !== 'loading') {
-      if (step === 4 && manifest !== 'ENTEBBE' && manifest !== 'KAJJANSI' && category === 'Residential') {
-        setStep(2); // Skipped step 3
-      } else if (step === 4 && manifest === 'ENTEBBE' && category === 'Schools') {
-        setStep(2); // Skipped step 3
-      } else {
-        setStep(step - 1);
-      }
-    } else if (step === 1) {
+    if (step > STEP_LOCATION && status !== 'loading') {
+      // Go back to the previous step on this path (skipped steps are not in flowSteps)
+      const idx = flowSteps.indexOf(step);
+      setStep(idx > 0 ? flowSteps[idx - 1] : STEP_LOCATION);
+    } else if (step === STEP_LOCATION) {
       onBack();
     }
   };
@@ -226,7 +293,7 @@ export default function RegistrationForm({ onBack }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if ((subOption.toUpperCase() === 'OTHER' || (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) && !instituteName.trim()) {
+    if ((subOption.toUpperCase() === 'OTHER' || (region === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) && !instituteName.trim()) {
       setErrorMessage(subOption === 'ALUMNI' ? "Please provide the Institution." : "Please provide the Institute Name.");
       setStatus('error');
       return;
@@ -252,7 +319,7 @@ export default function RegistrationForm({ onBack }) {
       return {
         name: !p.name.trim(),
         phone: !p.phone.trim() || !!getPhoneError(p.phone),
-        church: manifest === 'ENTEBBE' && category === 'Churches' && !p.church.trim()
+        church: region === 'ENTEBBE' && category === 'Churches' && !p.church.trim()
       };
     });
 
@@ -275,7 +342,7 @@ export default function RegistrationForm({ onBack }) {
         backendLocation = instituteName;
       }
 
-      if (manifest === 'ENTEBBE') {
+      if (region === 'ENTEBBE') {
         if (category === 'Residentials') backendCategory = 'RESIDENTIALS';
         if (category === 'Campuses') backendCategory = 'ENTEBBE CAMPUSES';
         if (category === 'Churches') backendCategory = 'CHURCHES';
@@ -284,11 +351,14 @@ export default function RegistrationForm({ onBack }) {
           backendCategory = 'BRING 20';
           backendLocation = ministerName;
         }
-      } else if (manifest === 'KAJJANSI') {
+      } else if (region === 'KAJJANSI') {
         if (category === 'Residential') backendCategory = 'KAJJANSI RESIDENTIAL';
         if (category === 'Campuses') backendCategory = 'KAJJANSI CAMPUSES';
-      } else {
+      } else if (region === 'CENTRAL REGION') {
         if (category === 'Residential') backendCategory = 'CENTRAL REGION';
+        if (category === 'Campuses') backendCategory = 'CAMPUSES OUT OF ENTEBBE';
+      } else if (region === 'OTHER REGIONS') {
+        if (category === 'Residential') backendCategory = 'OTHER REGIONS';
         if (category === 'Campuses') backendCategory = 'CAMPUSES OUT OF ENTEBBE';
       }
 
@@ -302,7 +372,7 @@ export default function RegistrationForm({ onBack }) {
         ministerContact: ministerPhone,
         people: people.map(p => ({
           ...p,
-          church: (subOption.toUpperCase() === 'OTHER' || (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) ? instituteName : p.church
+          church: (subOption.toUpperCase() === 'OTHER' || (region === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) ? instituteName : p.church
         }))
       };
 
@@ -339,32 +409,121 @@ export default function RegistrationForm({ onBack }) {
   // Render Helpers
   // ---------------------------------------------------------
 
-  const renderStep1 = () => (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-      className="space-y-4"
-    >
-      <h3 className="text-lg font-medium text-white mb-4">Select Manifest Location</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-        {DATA.MANIFESTS.map((m) => (
-          <button
-            key={m}
-            onClick={() => handleManifestSelect(m)}
-            className={`px-4 py-4 rounded-xl text-left font-medium transition-all flex items-center justify-between border
-              ${m === 'ENTEBBE'
-                ? 'bg-orange-500/10 border-orange-500/50 text-orange-400 hover:bg-orange-500/20 col-span-1 sm:col-span-2 text-lg shadow-[0_0_15px_rgba(253,106,59,0.15)]'
-                : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'}`}
-          >
-            <span>{m}</span>
-            <ChevronRight className={`w-5 h-5 ${m === 'ENTEBBE' ? 'text-orange-500' : 'text-gray-500'}`} />
-          </button>
-        ))}
-      </div>
-    </motion.div>
-  );
+  const renderLocationStep = () => {
+    const hints = {
+      'CENTRAL REGION': `${CENTRAL_MANIFESTS.slice(0, 3).map(toTitleCase).join(', ')} and ${CENTRAL_MANIFESTS.length - 3} more`,
+      'OTHER REGIONS': 'Type in the name of your manifest'
+    };
 
-  const renderStep2 = () => {
-    const cats = manifest === 'ENTEBBE' ? DATA.ENTEBBE_CATEGORIES : DATA.OTHER_CATEGORIES;
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+        className="space-y-4"
+      >
+        <h3 className="text-lg font-medium text-white mb-4">Select Manifest Location</h3>
+        <div className="grid grid-cols-1 gap-3">
+          {DATA.LOCATIONS.map((loc) => (
+            <button
+              key={loc}
+              onClick={() => handleLocationSelect(loc)}
+              className={`px-4 py-4 rounded-xl text-left font-medium transition-all flex items-center justify-between border
+                ${loc === 'ENTEBBE'
+                  ? 'bg-orange-500/10 border-orange-500/50 text-orange-400 hover:bg-orange-500/20 text-lg shadow-[0_0_15px_rgba(253,106,59,0.15)]'
+                  : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'}`}
+            >
+              <span className="flex flex-col">
+                <span>{loc}</span>
+                {hints[loc] && <span className="text-xs font-normal text-gray-500 mt-1">{hints[loc]}</span>}
+              </span>
+              <ChevronRight className={`w-5 h-5 flex-shrink-0 ${loc === 'ENTEBBE' ? 'text-orange-500' : 'text-gray-500'}`} />
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderManifestStep = () => {
+    if (region === 'OTHER REGIONS') {
+      return (
+        <motion.form
+          onSubmit={handleOtherManifestSubmit}
+          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+          className="space-y-6"
+        >
+          <h3 className="text-lg font-medium text-white mb-4">Name of Manifest</h3>
+
+          <div className="relative pt-2">
+            <input
+              type="text"
+              list="other-manifests-list"
+              value={otherManifestName}
+              onChange={(e) => { setOtherManifestName(e.target.value); setManifestError(''); }}
+              placeholder=" "
+              className={`floating-input w-full bg-white/5 border rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-1 transition-all peer
+                ${manifestError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-orange-500 focus:ring-orange-500/50'}`}
+              required
+            />
+            <datalist id="other-manifests-list">
+              {blockSuggestions('OTHER REGIONS').map((val, idx) => (
+                <option key={idx} value={val} />
+              ))}
+            </datalist>
+            <label className={`floating-label absolute left-4 top-5.5 origin-left transition-all duration-200 pointer-events-none
+                ${manifestError ? 'text-red-500 peer-focus:text-red-500' : 'text-gray-400 peer-focus:text-orange-500'}`}>
+              Enter Manifest Name
+            </label>
+            <AnimatePresence>
+              {manifestError && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="text-xs text-red-400 mt-1.5 ml-2 font-medium"
+                >
+                  {manifestError}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-medium rounded-xl px-4 py-3.5 transition-colors"
+          >
+            Continue
+          </button>
+        </motion.form>
+      );
+    }
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+        className="space-y-4"
+      >
+        <h3 className="text-lg font-medium text-white mb-4">Select Manifest in Central Region</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+          {CENTRAL_MANIFESTS.map((m) => (
+            <button
+              key={m}
+              onClick={() => handleManifestSelect(m)}
+              className={`px-4 py-4 rounded-xl text-left font-medium transition-all flex items-center justify-between border
+                ${m === manifest
+                  ? 'bg-orange-500/10 border-orange-500/50 text-orange-400'
+                  : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'}`}
+            >
+              <span>{m}</span>
+              <ChevronRight className={`w-5 h-5 ${m === manifest ? 'text-orange-500' : 'text-gray-500'}`} />
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderCategoryStep = () => {
+    const cats = region === 'ENTEBBE' ? DATA.ENTEBBE_CATEGORIES : DATA.OTHER_CATEGORIES;
     return (
       <motion.div
         initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
@@ -387,14 +546,14 @@ export default function RegistrationForm({ onBack }) {
     );
   };
 
-  const renderStep3 = () => {
+  const renderDetailsStep = () => {
     if (category === 'Bring 20') {
       return (
         <motion.form
           onSubmit={(e) => {
             e.preventDefault();
             if (getPhoneError(ministerPhone)) return;
-            setStep(4);
+            setStep(STEP_PEOPLE);
           }}
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
           className="space-y-6"
@@ -457,12 +616,12 @@ export default function RegistrationForm({ onBack }) {
     let placeholder = "";
     let isInput = false;
 
-    if (manifest === 'ENTEBBE') {
+    if (region === 'ENTEBBE') {
       if (category === 'Residentials') { options = DATA.ENTEBBE_RESIDENTIALS; placeholder = "Select Residential Area"; }
       if (category === 'Campuses') { options = DATA.ENTEBBE_CAMPUSES; placeholder = "Select Campus"; }
       if (category === 'Churches') { options = DATA.CHURCH_ROLES; placeholder = "Select Role"; }
     } else {
-      if (category === 'Campuses' || manifest === 'KAJJANSI') {
+      if (category === 'Campuses' || region === 'KAJJANSI') {
         isInput = true;
         placeholder = category === 'Residential' ? "Enter Residential Area" : "Enter Campus Name";
       }
@@ -475,7 +634,7 @@ export default function RegistrationForm({ onBack }) {
         className="space-y-6"
       >
         <h3 className="text-lg font-medium text-white mb-4">
-          {manifest === 'ENTEBBE' && category === 'Churches' ? 'Are you a Pastor or Member?' : `Specify ${category}`}
+          {region === 'ENTEBBE' && category === 'Churches' ? 'Are you a Pastor or Member?' : `Specify ${category}`}
         </h3>
 
         {isInput ? (
@@ -491,9 +650,9 @@ export default function RegistrationForm({ onBack }) {
             />
             <datalist id="campuses-list">
               {(
-                manifest === 'KAJJANSI' && category === 'Residential' ? existingBlocks['KAJJANSI RESIDENTIAL'] || [] :
-                  manifest === 'KAJJANSI' && category === 'Campuses' ? existingBlocks['KAJJANSI CAMPUSES'] || [] :
-                    existingBlocks['CAMPUSES OUT OF ENTEBBE'] || []
+                region === 'KAJJANSI' && category === 'Residential' ? blockSuggestions('KAJJANSI RESIDENTIAL') :
+                  region === 'KAJJANSI' && category === 'Campuses' ? blockSuggestions('KAJJANSI CAMPUSES') :
+                    blockSuggestions('CAMPUSES OUT OF ENTEBBE')
               ).map((val, idx) => (
                 <option key={idx} value={val} />
               ))}
@@ -508,7 +667,7 @@ export default function RegistrationForm({ onBack }) {
               <button
                 type="button"
                 key={opt}
-                onClick={() => { setSubOption(opt); setStep(4); }}
+                onClick={() => { setSubOption(opt); setStep(STEP_PEOPLE); }}
                 className="px-5 py-3.5 bg-white/5 border border-white/10 rounded-xl text-left text-gray-200 font-medium transition-all hover:bg-white/10 hover:border-white/20 flex items-center justify-between"
               >
                 <span>{opt}</span>
@@ -530,7 +689,7 @@ export default function RegistrationForm({ onBack }) {
     );
   };
 
-  const renderStep4 = () => (
+  const renderPeopleStep = () => (
     <motion.form
       onSubmit={handleSubmit}
       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
@@ -543,7 +702,7 @@ export default function RegistrationForm({ onBack }) {
         </span>
       </div>
 
-      {((subOption.toUpperCase() === 'OTHER') || (manifest === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) && (
+      {((subOption.toUpperCase() === 'OTHER') || (region === 'ENTEBBE' && category === 'Campuses' && subOption === 'ALUMNI')) && (
         <div className="relative pt-1 mb-6">
           <input
             type="text"
@@ -717,7 +876,7 @@ export default function RegistrationForm({ onBack }) {
                 </div>
               )}
 
-              {manifest === 'ENTEBBE' && category === 'Churches' && (
+              {region === 'ENTEBBE' && category === 'Churches' && (
                 <div className="relative pt-1">
                   <input
                     type="text"
@@ -869,7 +1028,7 @@ export default function RegistrationForm({ onBack }) {
             CTF <span className="text-orange-500">Registration</span>
           </h1>
           <div className="flex items-center justify-center gap-1.5 mt-2">
-            {[1, 2, 3, 4].map(s => (
+            {flowSteps.map(s => (
               <div
                 key={s}
                 className={`h-1.5 rounded-full transition-all duration-300 ${step >= s ? 'bg-orange-500' : 'bg-white/10'} ${step === s ? 'w-6' : 'w-2'}`}
@@ -883,10 +1042,11 @@ export default function RegistrationForm({ onBack }) {
           <AnimatePresence mode="wait">
             {status === 'success' && renderSuccess()}
             {status === 'loading' && renderLoadingScreen()}
-            {status !== 'success' && status !== 'loading' && step === 1 && <motion.div key="s1" className="h-full">{renderStep1()}</motion.div>}
-            {status !== 'success' && status !== 'loading' && step === 2 && <motion.div key="s2" className="h-full">{renderStep2()}</motion.div>}
-            {status !== 'success' && status !== 'loading' && step === 3 && <motion.div key="s3" className="h-full">{renderStep3()}</motion.div>}
-            {status !== 'success' && status !== 'loading' && step === 4 && <motion.div key="s4" className="h-full">{renderStep4()}</motion.div>}
+            {status !== 'success' && status !== 'loading' && step === STEP_LOCATION && <motion.div key="s1" className="h-full">{renderLocationStep()}</motion.div>}
+            {status !== 'success' && status !== 'loading' && step === STEP_MANIFEST && <motion.div key="s2" className="h-full">{renderManifestStep()}</motion.div>}
+            {status !== 'success' && status !== 'loading' && step === STEP_CATEGORY && <motion.div key="s3" className="h-full">{renderCategoryStep()}</motion.div>}
+            {status !== 'success' && status !== 'loading' && step === STEP_DETAILS && <motion.div key="s4" className="h-full">{renderDetailsStep()}</motion.div>}
+            {status !== 'success' && status !== 'loading' && step === STEP_PEOPLE && <motion.div key="s5" className="h-full">{renderPeopleStep()}</motion.div>}
           </AnimatePresence>
         </div>
       </motion.div>
