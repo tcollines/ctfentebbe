@@ -1,5 +1,5 @@
 // Talks to the CTF ENTEBBE Google Apps Script web app (the Google Sheet).
-export const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygaAjFxtwQmnUK8qZN4mKSdV5g0OcV-4snozEXmGhHSWnfhaYrUTcgZR_ECBIoG9c2_w/exec";
+export const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-AE2y5qSWROCL-20oRLlPJUSLbI7cbZmgKsiz21wD2n40HtBnQw9sEx_ytHChXUBDPg/exec";
 
 // How long to wait for the sheet to confirm a save. The script queues simultaneous
 // submissions (up to 60s), so this leaves room for a busy moment.
@@ -11,7 +11,7 @@ const SERVER_MESSAGES = {
   'Sheet not found': 'Your data was not saved: the sheet for this category could not be found. Please tell the coordinator.',
 };
 
-class SaveError extends Error {}
+class SaveError extends Error { }
 
 // Sends one submission and waits for the sheet to confirm it was saved.
 // Resolves on success; otherwise throws an Error whose message can be shown to the user.

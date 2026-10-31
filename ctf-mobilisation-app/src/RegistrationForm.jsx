@@ -365,6 +365,7 @@ export default function RegistrationForm({ onBack }) {
       // Send all people in ONE single request
       const payload = {
         category: backendCategory,
+        sourceCategory: category,
         location: backendLocation,
         ministerContact: ministerPhone,
         people: people.map(p => ({

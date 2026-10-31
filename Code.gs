@@ -21,6 +21,7 @@ function handlePost_(e) {
     var data = JSON.parse(e.postData.contents);
     var category = data.category; // e.g., "RESIDENTIALS"
     var location = data.location; // e.g., "KATABI"
+    var swCategory = getSoulsWonCategory_(category, data.sourceCategory);
     var name = data.name;
     var phone = data.phone;
     var church = data.church || "";
@@ -83,7 +84,7 @@ function handlePost_(e) {
         }
         setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [targetStartCol + 4]);
         sheet.getRange(targetRow, targetStartCol, outputData.length, 5).setValues(outputData);
-        writeSoulsWon_(spreadsheet, peopleArray, location);
+        writeSoulsWon_(spreadsheet, peopleArray, location, swCategory);
       }
       
       return ContentService.createTextOutput(JSON.stringify({status: "success"}))
@@ -118,7 +119,7 @@ function handlePost_(e) {
         }
         setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [targetStartCol + 2, targetStartCol + 4]);
         sheet.getRange(targetRow, targetStartCol, outputData.length, 6).setValues(outputData);
-        writeSoulsWon_(spreadsheet, peopleArray, location);
+        writeSoulsWon_(spreadsheet, peopleArray, location, swCategory);
       }
       
       return ContentService.createTextOutput(JSON.stringify({status: "success"}))
@@ -152,7 +153,7 @@ function handlePost_(e) {
         }
         setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [2]);
         sheet.getRange(targetRow, 1, outputData.length, 4).setValues(outputData);
-        writeSoulsWon_(spreadsheet, peopleArray, location);
+        writeSoulsWon_(spreadsheet, peopleArray, location, swCategory);
       }
       return ContentService.createTextOutput(JSON.stringify({status: "success"}))
         .setMimeType(ContentService.MimeType.JSON);
@@ -239,7 +240,7 @@ function handlePost_(e) {
       // Bulk write all people at once! (Extremely fast)
       setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [targetStartCol + 2]);
       sheet.getRange(targetRow, targetStartCol, outputData.length, 4).setValues(outputData);
-      writeSoulsWon_(spreadsheet, peopleArray, location);
+      writeSoulsWon_(spreadsheet, peopleArray, location, swCategory);
     }
     
     return ContentService.createTextOutput(JSON.stringify({status: "success"}))
@@ -317,9 +318,24 @@ function addBlock_(sheet, row2, title) {
   return newCol;
 }
 
+// Maps backend sheet names to the human-readable Category label for the SOULS WON sheet.
+function getSoulsWonCategory_(category, sourceCategory) {
+  if (sourceCategory && sourceCategory.toString().trim() !== "") {
+    return sourceCategory.toString().trim();
+  }
+  if (category === "ENTEBBE MISSION") return "Entebbe Mission";
+  if (category === "RESIDENTIALS") return "Residentials";
+  if (category === "KAJJANSI RESIDENTIAL" || category === "CENTRAL REGION" || category === "OTHER REGIONS") return "Residential";
+  if (category === "ENTEBBE CAMPUSES" || category === "KAJJANSI CAMPUSES" || category === "CAMPUSES OUT OF ENTEBBE") return "Campuses";
+  if (category === "CHURCHES") return "Churches";
+  if (category === "SCHOOLS") return "Schools";
+  if (category === "BRING 20") return "Bring 20";
+  return category || "";
+}
+
 // Adds everyone marked "Souls Won" to the SOULS WON tab. Called only after the main save has succeeded,
 // so a failed save followed by a retry doesn't create duplicate Souls Won rows.
-function writeSoulsWon_(spreadsheet, peopleArray, location) {
+function writeSoulsWon_(spreadsheet, peopleArray, location, swCategory) {
   var soulsWonPeople = peopleArray.filter(function(p) { return p.soulsWon === true; });
   if (soulsWonPeople.length === 0) return;
 
@@ -344,8 +360,8 @@ function writeSoulsWon_(spreadsheet, peopleArray, location) {
     var sp = soulsWonPeople[j];
     var ssn = (swTargetRow - 3) + j;
     var manifestLoc = sp.church ? sp.church : location;
-    swOutputData.push([ssn, sp.name, sp.phone, manifestLoc]);
+    swOutputData.push([ssn, sp.name, sp.phone, manifestLoc, swCategory || ""]);
   }
   setPhoneColumnsAsText_(swSheet, swTargetRow, swOutputData.length, [3]);
-  swSheet.getRange(swTargetRow, 1, swOutputData.length, 4).setValues(swOutputData);
+  swSheet.getRange(swTargetRow, 1, swOutputData.length, 5).setValues(swOutputData);
 }
