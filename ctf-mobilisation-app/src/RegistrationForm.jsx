@@ -342,6 +342,7 @@ export default function RegistrationForm({ onBack }) {
       }
 
       if (region === 'ENTEBBE') {
+        if (category === 'Entebbe Mission') backendCategory = 'ENTEBBE MISSION';
         if (category === 'Residentials') backendCategory = 'RESIDENTIALS';
         if (category === 'Campuses') backendCategory = 'ENTEBBE CAMPUSES';
         if (category === 'Churches') backendCategory = 'CHURCHES';
@@ -606,6 +607,7 @@ export default function RegistrationForm({ onBack }) {
     let isInput = false;
 
     if (region === 'ENTEBBE') {
+      if (category === 'Entebbe Mission') { options = DATA.ENTEBBE_MISSION_AREAS; placeholder = "Select Area"; }
       if (category === 'Residentials') { options = DATA.ENTEBBE_RESIDENTIALS; placeholder = "Select Residential Area"; }
       if (category === 'Campuses') { options = DATA.ENTEBBE_CAMPUSES; placeholder = "Select Campus"; }
       if (category === 'Churches') { options = DATA.CHURCH_ROLES; placeholder = "Select Role"; }

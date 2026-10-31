@@ -31,6 +31,7 @@ export const DATA = {
     "OTHER REGIONS"
   ],
   ENTEBBE_CATEGORIES: [
+    "Entebbe Mission",
     "Residentials",
     "Campuses",
     "Churches",
@@ -40,6 +41,29 @@ export const DATA = {
   OTHER_CATEGORIES: [
     "Residential",
     "Campuses"
+  ],
+  ENTEBBE_MISSION_AREAS: [
+    "BUWAYA",
+    "BANGA-NAKIWOGO",
+    "LUGONJO",
+    "GARUGA",
+    "KITARA-KISUBI",
+    "MPALA-BUBULI",
+    "LYAMUTUNDWE",
+    "NKUMBA",
+    "ABAITA",
+    "KABALE-KIWAFU",
+    "BUNONO",
+    "KITUBULU",
+    "NSAMIZI-LUNYO",
+    "KATABI",
+    "BUGONGA",
+    "KITOORO",
+    "KIGUNGU",
+    "KASENYI",
+    "NKUMBA UNIVERSITY",
+    "KISUBI UNIVERSITY",
+    "FISHERIES INSTITUTE"
   ],
   ENTEBBE_RESIDENTIALS: [
     "ABAITA",
