@@ -82,7 +82,6 @@ export default function WelcomeScreen({ onNavigate }) {
           <motion.div
             className="absolute left-3 right-3 bg-black rounded-lg overflow-hidden shadow-2xl"
             style={{ 
-              height: '400px',
               bottom: '6px',
               border: '1px solid #333',
               transformOrigin: 'bottom center',
@@ -90,7 +89,7 @@ export default function WelcomeScreen({ onNavigate }) {
             }}
             initial={{ y: 200, scale: 0.97 }}
             animate={{ 
-              y: stage >= 3 ? -90 : 200,
+              y: stage >= 3 ? -100 : 200,
               scale: stage >= 3 ? 1.03 : 0.97,
             }}
             transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
@@ -98,7 +97,7 @@ export default function WelcomeScreen({ onNavigate }) {
             <img 
               src="/ctf-entebbe-2026-flyer.jpg" 
               alt="Catch The Fire 2026, Entebbe Edition: Fri 6th Nov 2026, 2PM EAT, Nkumba University Pitch" 
-              className="w-full h-full object-cover"
+              className="w-full h-auto block"
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.parentElement.innerHTML = '<div class="text-center p-4"><h3 class="text-orange-500 font-bold text-xl">CTF Entebbe</h3><p class="text-xs text-gray-400 mt-2">Official Invitation</p></div>';
