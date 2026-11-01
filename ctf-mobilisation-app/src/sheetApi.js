@@ -1,5 +1,11 @@
+import { requestUpdateCheck } from './appUpdate';
+
 // Talks to the CTF ENTEBBE Google Apps Script web app (the Google Sheet).
 export const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-AE2y5qSWROCL-20oRLlPJUSLbI7cbZmgKsiz21wD2n40HtBnQw9sEx_ytHChXUBDPg/exec";
+
+// Sent with every submission. Raise it when an update must reach every phone, then raise
+// MIN_APP_VERSION in Code.gs to the same number so older copies of the app are asked to refresh.
+export const APP_VERSION = 2;
 
 // How long to wait for the sheet to confirm a save. The script queues simultaneous
 // submissions (up to 60s), so this leaves room for a busy moment.
@@ -25,7 +31,7 @@ export async function submitToSheet(payload, { timeoutMs = SAVE_TIMEOUT_MS } = {
       // text/plain keeps this a "simple" request: no CORS preflight (which Apps Script can't answer),
       // and the script's reply can still be read.
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, appVersion: APP_VERSION }),
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -40,6 +46,7 @@ export async function submitToSheet(payload, { timeoutMs = SAVE_TIMEOUT_MS } = {
     throw new SaveError("Couldn't reach the server, so your data was not saved. Please check your internet connection and try again.");
   } finally {
     clearTimeout(timer);
+    requestUpdateCheck(); // a good moment to see whether a newer version is out
   }
 
   let result;
@@ -49,6 +56,9 @@ export async function submitToSheet(payload, { timeoutMs = SAVE_TIMEOUT_MS } = {
     throw new SaveError('The server sent an unexpected reply, so your data may not have been saved. Please try again.');
   }
 
+  if (result && result.code === 'UPDATE_REQUIRED') {
+    throw new SaveError('This copy of the app is out of date, so your data was not saved. Tap Update at the bottom of the screen (or close the page and open the link again), then submit again.');
+  }
   if (!result || result.status !== 'success') {
     const message = result && result.message ? String(result.message) : 'unknown error';
     throw new SaveError(SERVER_MESSAGES[message] || `Your data was not saved (${message}). Please try again.`);

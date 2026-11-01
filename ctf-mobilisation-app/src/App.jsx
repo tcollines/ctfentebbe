@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import WelcomeScreen from './WelcomeScreen';
 import RegistrationForm from './RegistrationForm';
 import ServeForm from './ServeForm';
+import { useUpdateAvailable, reloadForUpdate } from './appUpdate';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('welcome'); // 'welcome' | 'form'
+  const updateAvailable = useUpdateAvailable();
+
+  // On the welcome screen nothing has been typed yet, so a new version can load straight away
+  useEffect(() => {
+    if (updateAvailable && currentPage === 'welcome') reloadForUpdate();
+  }, [updateAvailable, currentPage]);
+
   const handleNavigate = (page) => {
     setCurrentPage(page === 'entebbe' ? 'form' : page);
   };
 
   const handleBackToWelcome = () => {
+    // Leaving a form is a safe moment to load a new version
+    if (updateAvailable && reloadForUpdate()) return;
     setCurrentPage('welcome');
   };
 
@@ -71,6 +81,25 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* New version banner (shown inside the forms, where reloading could lose what was typed) */}
+      {updateAvailable && currentPage !== 'welcome' && (
+        <div className="fixed inset-x-0 bottom-0 z-50 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-orange-500/40 bg-[#141414]/95 px-4 py-3 shadow-2xl backdrop-blur">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">A new version of the app is ready</p>
+              <p className="text-xs text-gray-400">Finish what you are entering, then tap Update.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => reloadForUpdate({ userInitiated: true })}
+              className="shrink-0 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            >
+              Update
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

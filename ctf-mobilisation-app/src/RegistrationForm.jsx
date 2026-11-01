@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, Trash2, ChevronRight, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { DATA, ALL_RESIDENCES, CENTRAL_MANIFESTS } from './data';
+import { DATA, ALL_RESIDENCES, CENTRAL_MANIFESTS, groupMissionAreas } from './data';
 import { SCRIPT_URL, submitToSheet } from './sheetApi';
 
 // Registration steps. Not every path visits every step (see flowSteps inside the component).
@@ -652,6 +652,42 @@ export default function RegistrationForm({ onBack }) {
             <label className="floating-label absolute text-gray-400 left-4 top-5.5 origin-left transition-all duration-200 pointer-events-none peer-focus:text-orange-500">
               {placeholder}
             </label>
+          </div>
+        ) : region === 'ENTEBBE' && category === 'Entebbe Mission' ? (
+          // Entebbe Mission: today's areas first, then yesterday's, the coming days, other areas and older days
+          <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar space-y-5">
+            {groupMissionAreas().map((group) => (
+              <div key={group.key} className="space-y-3">
+                <div className={`flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider ${group.kind === 'today' ? 'text-orange-300' : 'text-gray-500'}`}>
+                  {group.kind === 'today' && (
+                    <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] text-white">Today</span>
+                  )}
+                  {group.kind === 'yesterday' && (
+                    <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[10px] text-orange-200">Yesterday</span>
+                  )}
+                  <span>{group.label}</span>
+                </div>
+                {group.areas.map((opt) => (
+                  <button
+                    type="button"
+                    key={`${group.key}-${opt}`}
+                    onClick={() => { setSubOption(opt); setStep(STEP_PEOPLE); }}
+                    className={`w-full px-5 py-3.5 border rounded-xl text-left font-medium transition-all flex items-center justify-between ${
+                      group.kind === 'today'
+                        ? 'bg-orange-500/10 border-orange-500/70 text-white hover:bg-orange-500/20'
+                        : group.kind === 'yesterday'
+                          ? 'bg-white/5 border-orange-500/25 text-gray-200 hover:bg-white/10'
+                          : group.kind === 'earlier'
+                            ? 'bg-white/[0.03] border-white/10 text-gray-500 hover:bg-white/10 hover:text-gray-300'
+                            : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <span>{opt}</span>
+                    <ChevronRight className="w-5 h-5 text-gray-500" />
+                  </button>
+                ))}
+              </div>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">

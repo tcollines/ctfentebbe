@@ -1,3 +1,9 @@
+// Oldest app version whose submissions are saved (the app sends APP_VERSION from sheetApi.js
+// as data.appVersion). 0 = accept every copy of the app. Once most phones have updated, set
+// this to the app's APP_VERSION and deploy a new version: older copies of the app are then told
+// to refresh, and their submission is not saved.
+var MIN_APP_VERSION = 0;
+
 // Only one submission is written at a time, so two people saving at the same moment
 // can't be given the same empty rows and overwrite each other.
 function doPost(e) {
@@ -19,6 +25,13 @@ function handlePost_(e) {
   try {
     // Parse the incoming JSON data
     var data = JSON.parse(e.postData.contents);
+    if (MIN_APP_VERSION > 0 && !(Number(data.appVersion) >= MIN_APP_VERSION)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        code: "UPDATE_REQUIRED",
+        message: "Your app is out of date. Close the page, open the link again and submit again."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
     var category = data.category; // e.g., "RESIDENTIALS"
     var location = data.location; // e.g., "KATABI"
     var swCategory = getSoulsWonCategory_(category, data.sourceCategory);
@@ -115,10 +128,10 @@ function handlePost_(e) {
           var p = peopleArray[i];
           var sn = (targetRow - 3) + i;
           // [NO., NAME (MIN), CONTACT (MIN), NAME, CONTACT, RESIDENCE]
-          outputData.push([sn, data.location, data.ministerContact || "", p.name || "", p.phone || "", p.residence || p.church || ""]);
+          outputData.push([data.location, data.ministerContact || "", p.name || "", p.phone || "", p.residence || p.church || ""]); // NO. in column A comes from the formula in A4 - do not write column A
         }
         setPhoneColumnsAsText_(sheet, targetRow, outputData.length, [targetStartCol + 2, targetStartCol + 4]);
-        sheet.getRange(targetRow, targetStartCol, outputData.length, 6).setValues(outputData);
+        sheet.getRange(targetRow, 2, outputData.length, 5).setValues(outputData); // start at column B so the A4 formula is not overwritten
         writeSoulsWon_(spreadsheet, peopleArray, location, swCategory);
       }
       
